@@ -7,9 +7,9 @@
 
    emacs F10
    Begin commands to deploy this file using Azure CLI with bash
-   echo WaitForBuildComplete
-   WaitForBuildComplete
-   echo "Previous build is complete. Begin deployment build."
+   #echo WaitForBuildComplete
+   #WaitForBuildComplete
+   #echo "Previous build is complete. Begin deployment build."
    az deployment group create --name $name --resource-group $rg   --template-file  deploy-ServiceBusSimpleSendReceive.bicep
    echo end deploy
    az resource list -g $rg --query "[?resourceGroup=='$rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table
@@ -17,11 +17,11 @@
 
    emacs ESC 2 F10
    Begin commands to shut down this deployment using Azure CLI with bash
-   echo CreateBuildEvent.exe
-   CreateBuildEvent.exe&
+   #echo CreateBuildEvent.exe
+   #CreateBuildEvent.exe&
    echo "begin shutdown"
    az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $rg
-   BuildIsComplete.exe
+   #BuildIsComplete.exe
    az resource list -g $rg --query "[?resourceGroup=='$rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table
    echo "showdown is complete"
    End commands to shut down this deployment using Azure CLI with bash
@@ -39,37 +39,12 @@
    EOF
    End commands for one time initializations using Azure CLI with bash
 
-
-
-dotnet script ServiceBusSendSimpleMainProgram.csx 1
-System.UnauthorizedAccessException: Put token failed. status-code: 401, status-description: InvalidSignature: The token has an invalid signature..
-For troubleshooting information, see https://aka.ms/azsdk/net/servicebus/exceptions/troubleshoot.
-   at Azure.Messaging.ServiceBus.Amqp.AmqpConnectionScope.CreateSendingLinkAsync(String entityPath, String identifier, AmqpConnection connection, TimeSpan timeout, CancellationToken cancellationToken)
-   at Azure.Messaging.ServiceBus.Amqp.AmqpConnectionScope.OpenSenderLinkAsync(String entityPath, String identifier, TimeSpan timeout, CancellationToken cancellationToken)
-   at Azure.Messaging.ServiceBus.Amqp.AmqpSender.CreateLinkAndEnsureSenderStateAsync(TimeSpan timeout, CancellationToken cancellationToken)
-   at Microsoft.Azure.Amqp.FaultTolerantAmqpObject`1.OnCreateAsync(TimeSpan timeout, CancellationToken cancellationToken)
-   at Microsoft.Azure.Amqp.Singleton`1.GetOrCreateAsync(TimeSpan timeout, CancellationToken cancellationToken)
-   at Microsoft.Azure.Amqp.Singleton`1.GetOrCreateAsync(TimeSpan timeout, CancellationToken cancellationToken)
-   at Azure.Messaging.ServiceBus.Amqp.AmqpSender.CreateMessageBatchInternalAsync(CreateMessageBatchOptions options, TimeSpan timeout)
-   at Azure.Messaging.ServiceBus.Amqp.AmqpSender.<>c.<<CreateMessageBatchAsync>b__19_0>d.MoveNext()
---- End of stack trace from previous location ---
-   at Azure.Messaging.ServiceBus.ServiceBusRetryPolicy.RunOperation[T1,TResult](Func`4 operation, T1 t1, TransportConnectionScope scope, CancellationToken cancellationToken, Boolean logRetriesAsVerbose)
-   at Azure.Messaging.ServiceBus.ServiceBusRetryPolicy.RunOperation[T1,TResult](Func`4 operation, T1 t1, TransportConnectionScope scope, CancellationToken cancellationToken, Boolean logRetriesAsVerbose)
-   at Azure.Messaging.ServiceBus.Amqp.AmqpSender.CreateMessageBatchAsync(CreateMessageBatchOptions options, CancellationToken cancellationToken)
-   at Azure.Messaging.ServiceBus.ServiceBusSender.CreateMessageBatchAsync(CreateMessageBatchOptions options, CancellationToken cancellationToken)
-   at Submission#0.<<Initialize>>d__0.MoveNext() in c:\Users\shein\Documents\WinOOP\Examples\Azure\ServiceBus\SimpleSendAndReceive\ServiceBusSendSimpleMainProgram.csx:line 39
---- End of stack trace from previous location ---
-   at Dotnet.Script.Core.ScriptRunner.Execute[TReturn](String dllPath, IEnumerable`1 commandLineArgs) in C:\Users\VssAdministrator\AppData\Local\Temp\tmp31E6\Dotnet.Script.Core\ScriptRunner.cs:line 110
-
-
  */
 
 
 
-
-
-
-param sbdemo001NS_name string = 'sbnsQueueDemo'
+param sbdemo001NS_name string = 'SiegfriedSBQueueDemo001'
+param queueName string = 'mainqueue001'
 param loc string = resourceGroup().location
 param name string = uniqueString(resourceGroup().id)
 
@@ -113,7 +88,7 @@ resource sbnsnwrSendReceiveDemo 'Microsoft.ServiceBus/namespaces/networkRuleSets
 
 resource sbQueue 'Microsoft.ServiceBus/namespaces/queues@2022-01-01-preview' = {
   parent: sbnsSimpleSendReceiveDemo
-  name: 'mainqueue001'
+  name: queueName
   properties: {
     maxMessageSizeInKilobytes: 256
     lockDuration: 'PT1M'
@@ -199,6 +174,20 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_resource 'Microsoft.Web/s
       http20Enabled: false
       functionAppScaleLimit: 200
       minimumElasticInstanceCount: 0
+      appSettings: [
+        {
+          name: 'busNS'
+          value: sbdemo001NS_name
+        }
+        {
+          name: 'queue'
+          value: queueName
+        }
+        {
+          name: 'serviceBusConnectionString'
+          value: serviceBusConnection
+        }
+      ]
       connectionStrings: [
         {
           type: 'Custom'
