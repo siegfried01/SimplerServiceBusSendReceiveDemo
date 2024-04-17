@@ -13,12 +13,15 @@ $permissions = @(
     "Microsoft.ServiceBus/namespaces/topics/subscriptions/rules/write"
 )
 
+$subscriptionId="13c9725f-d20a-4c99-8ef4-d7bb78f98cff"
+
 # Create a custom role definition
-New-AzRoleDefinition -Name "Service Bus Reader/Writer" -Description "Can read from and write to Service Bus" -Actions $permissions -AssignableScope "/subscriptions/<subscription-id>"
+New-AzRoleDefinition -Name "Service Bus Reader/Writer" -Description "Can read from and write to Service Bus" -Actions $permissions -AssignableScope "/subscriptions/$subscriptionId"
+
 
 # Define variables
-$resourceGroupName = "YourResourceGroupName"
-$serviceBusNamespaceName = "YourServiceBusNamespaceName"
+$resourceGroupName = "rg_siegfriedServiceBusSimpleSendReceive"
+$serviceBusNamespaceName = "SiegfriedSBQueueDemo002"
 $roleDefinitionName = "Service Bus Reader/Writer" # This should match the name of the role definition you created earlier
 
 # Get the Service Bus namespace resource

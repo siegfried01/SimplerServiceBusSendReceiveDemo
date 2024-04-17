@@ -1,8 +1,8 @@
 /*
    Begin common prolog commands
    export name=ServiceBusSimpleSendReceive
-   export rg=rg_${name}
-   export loc=westus2
+   export rg=rg_siegfried${name}
+   export loc=eastus2
    End common prolog commands
 
    emacs F10
@@ -43,7 +43,7 @@
 
 
 
-param sbdemo001NS_name string = 'SiegfriedSBQueueDemo001'
+param sbdemo001NS_name string = 'SiegfriedSBQueueDemo002'
 param queueName string = 'mainqueue001'
 param loc string = resourceGroup().location
 param name string = uniqueString(resourceGroup().id)
