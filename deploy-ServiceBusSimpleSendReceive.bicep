@@ -1,9 +1,15 @@
 /*
    Begin common prolog commands
    export name=ServiceBusSimpleSendReceive
-   export rg=rg_siegfried${name}
-   export loc=eastus2
+   export rg=rg_${name}
+   export random=aryxbqmevvg3e
+   export loc=westus2
    End common prolog commands
+   
+   Begin commands to start server for executing this file using NodeJS with bash
+   echo az webapp log tail -g $rg -n "${random}-func"
+   az webapp log tail -g $rg -n "${random}-func"
+   End commands to start server for executing this file using NodeJS with bash
 
    emacs F10
    Begin commands to deploy this file using Azure CLI with bash
@@ -39,14 +45,22 @@
    EOF
    End commands for one time initializations using Azure CLI with bash
 
+   emacs ESC 4 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo az webapp log tail -g $rg -n "${random}-func"
+   az webapp log tail -g $rg -n "${random}-func"
+   End commands to deploy this file using Azure CLI with bash
+
+
+
  */
 
 
 
-param sbdemo001NS_name string = 'SiegfriedSBQueueDemo002'
 param queueName string = 'mainqueue001'
 param loc string = resourceGroup().location
 param name string = uniqueString(resourceGroup().id)
+param sbdemo001NS_name string = '${name}-servicebus'
 
 resource sbnsSimpleSendReceiveDemo 'Microsoft.ServiceBus/namespaces@2022-01-01-preview' = {
   name: sbdemo001NS_name
@@ -116,7 +130,7 @@ output busNS string = sbdemo001NS_name
 output queue string = sbQueue.name
 
 
-param sites_SimpleServiceBusReceiverAzureFuncs_name string = '${name}-func'
+param ServiceBusSenderReceiverPlans string = '${name}-func'
 resource func_plan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: '${name}-func-plan'
   location: loc
@@ -142,10 +156,13 @@ resource func_plan 'Microsoft.Web/serverfarms@2023-01-01' = {
   }
 }
 
-resource sites_SimpleServiceBusReceiverAzureFuncs_name_resource 'Microsoft.Web/sites@2023-01-01' = {
-  name: sites_SimpleServiceBusReceiverAzureFuncs_name
+resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
+  name: ServiceBusSenderReceiverPlans
   location: loc
   kind: 'functionapp'
+  identity:{
+    type: 'SystemAssigned'
+  }
   properties: {
     enabled: true
     hostNameSslStates: [
@@ -212,24 +229,24 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_resource 'Microsoft.Web/s
   
 }
 
-resource sites_SimpleServiceBusReceiverAzureFuncs_name_ftp 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-01-01' = {
-  parent: sites_SimpleServiceBusReceiverAzureFuncs_name_resource
+resource ServiceBusSenderReceiverFunctionsFtp 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-01-01' = {
+  parent: ServiceBusSenderReceiverFunctions
   name: 'ftp'
   properties: {
     allow: true
   }
 }
 
-resource sites_SimpleServiceBusReceiverAzureFuncs_name_scm 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-01-01' = {
-  parent: sites_SimpleServiceBusReceiverAzureFuncs_name_resource
+resource ServiceBusSenderReceiverFunctionsScm 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-01-01' = {
+  parent: ServiceBusSenderReceiverFunctions
   name: 'scm'
   properties: {
     allow: true
   }
 }
 
-resource sites_SimpleServiceBusReceiverAzureFuncs_name_web 'Microsoft.Web/sites/config@2023-01-01' = {
-  parent: sites_SimpleServiceBusReceiverAzureFuncs_name_resource
+resource ServiceBusSenderReceiverFunctionsWebConfig 'Microsoft.Web/sites/config@2023-01-01' = {
+  parent: ServiceBusSenderReceiverFunctions
   name: 'web'
   properties: {
     numberOfWorkers: 1
@@ -304,7 +321,7 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_web 'Microsoft.Web/sites/
 }
 
 resource sites_SimpleServiceBusReceiverAzureFuncs_name_73236288f08d4694a60c7016deb6b26b 'Microsoft.Web/sites/deployments@2023-01-01' = {
-  parent: sites_SimpleServiceBusReceiverAzureFuncs_name_resource
+  parent: ServiceBusSenderReceiverFunctions
   name: '73236288f08d4694a60c7016deb6b26b'
   properties: {
     status: 4
@@ -319,7 +336,7 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_73236288f08d4694a60c7016d
 }
 
 resource sites_SimpleServiceBusReceiverAzureFuncs_name_SimpleServiceBusReceiver 'Microsoft.Web/sites/functions@2023-01-01' = {
-  parent: sites_SimpleServiceBusReceiverAzureFuncs_name_resource
+  parent: ServiceBusSenderReceiverFunctions
   name: 'SimpleServiceBusReceiver'
   properties: {
     script_root_path_href: 'https://simpleservicebusreceiverazurefuncs.azurewebsites.net/admin/vfs/site/wwwroot/SimpleServiceBusReceiver/'
@@ -334,11 +351,17 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_SimpleServiceBusReceiver 
 }
 
 resource sites_SimpleServiceBusReceiverAzureFuncs_name_sites_SimpleServiceBusReceiverAzureFuncs_name_azurewebsites_net 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = {
-  parent: sites_SimpleServiceBusReceiverAzureFuncs_name_resource
-  name: '${sites_SimpleServiceBusReceiverAzureFuncs_name}.azurewebsites.net'
+  parent: ServiceBusSenderReceiverFunctions
+  name: '${ServiceBusSenderReceiverPlans}.azurewebsites.net'
   properties: {
     siteName: 'SimpleServiceBusReceiverAzureFuncs'
     hostNameType: 'Verified'
   }
 }
+//param serviceBusNamespaceId string
+
+
+
+
+
 
