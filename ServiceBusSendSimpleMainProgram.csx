@@ -3,6 +3,7 @@
 #r "nuget: Microsoft.Identity.Client, 4.48.1"
 // https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues?tabs=connection-string 
 
+// use this with  az webapp log tail -g rg_siegfriedServiceBusSimpleSendReceive -n l2ydjsjlzxaoe-func
 
 using System;
 using Azure.Messaging.ServiceBus;

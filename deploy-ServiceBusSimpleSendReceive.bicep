@@ -358,9 +358,34 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_sites_SimpleServiceBusRec
     hostNameType: 'Verified'
   }
 }
-//param serviceBusNamespaceId string
 
+module  assignRoleToFunctionApp 'assign-role-to-functionApp.bicep'{
 
+  name: 'assign-role-to-functionApp'
+  params: {
+	sbdemo001NS_name: sbdemo001NS_name
+	functionAppName: ServiceBusSenderReceiverPlans
+  }
+}
+/*
+param sbdemo001NS_name string = 'sbdemo001NS'
+param functionAppName string = 'SimpleServiceBusReceiverAzureFuncs'
+// Get the principalId of the Azure Function's managed identity
+resource functionApp 'Microsoft.Web/sites@2021-01-15' existing = {
+  name: functionAppName
+}
+//param principalId string = functionApp.identity.principalId
+
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(functionApp.identity.principalId, 'Azure Service Bus Data Receiver', sbdemo001NS_name)
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '090c5cfd-751d-490a-894a-3ce6f1109419')
+    principalId: functionApp.identity.principalId
+    scope: sbdemo001NS_name
+  }
+}
+
+*/
 
 
 
