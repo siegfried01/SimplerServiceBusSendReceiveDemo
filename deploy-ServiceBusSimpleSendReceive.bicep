@@ -7,6 +7,12 @@
    End common prolog commands
    
    Begin commands to start server for executing this file using NodeJS with bash
+   echo sleep 60
+   sleep 60
+   echo sleep 60
+   sleep 60
+   echo sleep 60
+   sleep 60
    echo az webapp log tail -g $rg -n "${random}-func"
    az webapp log tail -g $rg -n "${random}-func"
    End commands to start server for executing this file using NodeJS with bash
@@ -125,7 +131,12 @@ resource sbQueue 'Microsoft.ServiceBus/namespaces/queues@2022-01-01-preview' = {
 output serviceBusEndpoint1 string = sbnsSimpleSendReceiveDemo.properties.serviceBusEndpoint
 var serviceBusKeyId = '${sbnsSimpleSendReceiveDemo.id}/AuthorizationRules/RootManageSharedAccessKey'
 var serviceBusConnection = listKeys(serviceBusKeyId, sbnsSimpleSendReceiveDemo.apiVersion).primaryConnectionString
-output serviceBusConnectionString string  = serviceBusConnection
+// Extract the service bus endpoint from the connection string
+var serviceBusEndPoint = split(serviceBusConnection,';')[0]
+var serviceBusConnectionViaMSI= '${serviceBusEndPoint};Authentication=ManagedIdentity'
+output outputServiceBusEndpoint string = serviceBusEndPoint
+output outputServiceBusConnectionViaMSI string = serviceBusConnectionViaMSI
+output serviceBusConnectionString string = serviceBusConnection
 output busNS string = sbdemo001NS_name
 output queue string = sbQueue.name
 
@@ -200,15 +211,11 @@ resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
           name: 'queue'
           value: queueName
         }
-        {
-          name: 'serviceBusConnectionString'
-          value: serviceBusConnection
-        }
       ]
       connectionStrings: [
         {
           type: 'Custom'
-          connectionString: serviceBusConnection
+          connectionString: serviceBusConnectionViaMSI
           name: 'ServiceBusConnection'
         }
       ]
@@ -359,34 +366,33 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_sites_SimpleServiceBusRec
   }
 }
 
-module  assignRoleToFunctionApp 'assign-role-to-functionApp.bicep'{
+module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = {
 
   name: 'assign-role-to-functionApp'
   params: {
-	sbdemo001NS_name: sbdemo001NS_name
-	functionAppName: ServiceBusSenderReceiverPlans
-  }
-}
-/*
-param sbdemo001NS_name string = 'sbdemo001NS'
-param functionAppName string = 'SimpleServiceBusReceiverAzureFuncs'
-// Get the principalId of the Azure Function's managed identity
-resource functionApp 'Microsoft.Web/sites@2021-01-15' existing = {
-  name: functionAppName
-}
-//param principalId string = functionApp.identity.principalId
-
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(functionApp.identity.principalId, 'Azure Service Bus Data Receiver', sbdemo001NS_name)
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '090c5cfd-751d-490a-894a-3ce6f1109419')
-    principalId: functionApp.identity.principalId
-    scope: sbdemo001NS_name
+	roleScope: '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_ServiceBusSimpleSendReceive'
+	functionAppName: ServiceBusSenderReceiverFunctions.name
+    functionPrincipalId: ServiceBusSenderReceiverFunctions.identity.principalId
   }
 }
 
-*/
+@description('The URL for the GitHub repository that contains the project to deploy.')
+param repoURL string = 'https://github.com/siegfried01/SimplerServiceBusSendReceiveDemo.git'
 
+@description('The branch of the GitHub repository to use.')
+param branch string = 'master'
+
+
+// this only works for a single csproj file in the top level of the repo.
+// resource siteName_web 'Microsoft.Web/sites/sourcecontrols@2022-09-01' = {    
+//   parent: ServiceBusSenderReceiverFunctions
+//   name: 'web'
+//   properties: {
+//       repoUrl: repoURL
+//       branch: branch
+//       isManualIntegration: false
+//   }
+// }
 
 
 

@@ -4,19 +4,21 @@
 
 
 
-param sbdemo001NS_name string = 'sbdemo001NS'
+param roleScope string = 'sbdemo001NS'
 param functionAppName string = 'SimpleServiceBusReceiverAzureFuncs'
 // Get the principalId of the Azure Function's managed identity
 resource functionApp 'Microsoft.Web/sites@2021-01-15' existing = {
   name: functionAppName
 }
-param principalId string
+param functionPrincipalId string
 
+// see https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#azure-service-bus-data-receiver
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(principalId, 'Azure Service Bus Data Receiver', sbdemo001NS_name)
+  name: guid(functionPrincipalId, 'Azure Service Bus Data Receiver', roleScope)
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2b629674-e913-4c01-ae53-c6806df3ebe0')
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4f6d3b9b-027b-4f4c-9142-0e5a2a2247e0')
     principalId: functionApp.identity.principalId
-    scope: sbdemo001NS_name
+    scope: roleScope
   }
+  // see also: Azure Service Bus Data Sender	Allows for send access to Azure Service Bus resources.	69a216fc-b8fb-44d8-bc22-1f3c2cd27a39
 }

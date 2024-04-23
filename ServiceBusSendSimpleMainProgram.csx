@@ -1,9 +1,12 @@
 ﻿#r "nuget: Microsoft.Azure.ServiceBus, 5.2.0"    
 #r "nuget: Azure.Messaging.ServiceBus, 7.11.1"
 #r "nuget: Microsoft.Identity.Client, 4.48.1"
-// https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues?tabs=connection-string 
 
-// use this with  az webapp log tail -g rg_siegfriedServiceBusSimpleSendReceive -n l2ydjsjlzxaoe-func
+// Install C# script with "dotnet tool install -g dotnet-script" (see https://github.com/dotnet-script/dotnet-script)
+// Run this script with the command "dotnet script ServiceBusSendSimpleMainProgram.csx"
+// This C# code comes from  https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues?tabs=connection-string 
+//
+// use this with (for example)  az webapp log tail -g rg_siegfriedServiceBusSimpleSendReceive -n l2ydjsjlzxaoe-func
 
 using System;
 using Azure.Messaging.ServiceBus;
@@ -20,7 +23,7 @@ ServiceBusClient client;
 ServiceBusSender sender;
 
 // number of messages to be sent to the queue
-const int numOfMessages = 3;
+const int numOfMessages = 4;
 
 // The Service Bus client types are safe to cache and use as a singleton for the lifetime
 // of the application, which is best practice when messages are being published or read
