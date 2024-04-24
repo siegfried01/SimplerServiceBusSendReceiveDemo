@@ -52,10 +52,11 @@ stages:
         script: |         
           cd $(workingDirectory)
           pwd
-          ls -al $(workingDirectory)
+          ls -al
           find . -name \*.bicep
           cd $(System.DefaultWorkingDirectory)
           pwd
+          ls -al
           find . -name \*.bicep
     - task: CopyFiles@2
       displayName: Copy Infrastructure files
