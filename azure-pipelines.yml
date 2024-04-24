@@ -51,13 +51,13 @@ stages:
         targetType: 'inline'
         script: |         
           cd $(workingDirectory)
-          pwd
+          echo "show $PWD"
           ls -al
           find . -name \*.bicep
-          cd $(System.DefaultWorkingDirectory)
-          pwd
+          cp *.bicep $(Pipeline.Workspace)
+          cd $(Pipeline.Workspace)
+          echo "show pipeline.workspace"
           ls -al
-          find . -name \*.bicep
     - task: CopyFiles@2
       displayName: Copy Infrastructure files
       inputs:
@@ -66,7 +66,6 @@ stages:
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
-
 
 - stage: Deploy
   displayName: Deploy stage
