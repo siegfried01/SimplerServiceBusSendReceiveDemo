@@ -61,6 +61,10 @@ stages:
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
+    - publish: $(workingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep
+      artifact: drop1
+    - publish: $(workingDirectory)/assignRbacRoleToFunctionApp.bicep
+      artifact: drop2
 
 - stage: Deploy
   displayName: Deploy stage
@@ -82,9 +86,14 @@ stages:
             displayName: 'Deploy Azure Resources with Azure Deployment Group'
             inputs:
               azureSubscription: 'Siegfried Azure Connection'
-              scriptType: 'pscore'
+              scriptType: 'bash'
               scriptLocation: 'inlineScript'
-              inlineScript: 'az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  $(Pipeline.Workspace)/drop2/deploy-ServiceBusSimpleSendReceive.bicep'
+              inlineScript: |
+                cp $(Pipeline.Workspace)/drop1/deploy-ServiceBusSimpleSendReceive.bicep $(Pipeline.Workspace)
+                cp $(Pipeline.Workspace)/drop2/assignRbacRoleToFunctionApp.bicep $(Pipeline.Workspace)
+                cd $(Pipeline.Workspace)
+                ls -al
+                az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  deploy-ServiceBusSimpleSendReceive.bicep
 
           - task: AzureFunctionApp@1
             displayName: 'Azure functions app deploy'
