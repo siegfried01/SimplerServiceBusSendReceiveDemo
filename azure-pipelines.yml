@@ -79,4 +79,11 @@ stages:
               appType: functionApp
               appName: $(functionAppName)
               package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+          - task: AzureCLI@2
+            displayName: 'copy zip to the azure resource (function app)'
+            inputs:
+              azureSubscription: 'Azure subscription 1 (acc26051-92a5-4ed1-a226-64a187bc27db)'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az functionapp deployment source config-zip -g rg_ServiceBusSimpleSendReceive -n aryxbqmevvg3e-func --src (Pipeline.Workspace)/drop/$(Build.BuildId).zip'
               
