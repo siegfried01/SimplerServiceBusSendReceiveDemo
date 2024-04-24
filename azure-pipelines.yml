@@ -58,11 +58,6 @@ stages:
           cd $(Pipeline.Workspace)
           echo "show pipeline.workspace"
           ls -al
-    - task: CopyFiles@2
-      displayName: Copy Infrastructure files
-      inputs:
-       SourceFolder:  $(workingDirectory)/*.bicep
-       TargetFolder: $(Pipeline.Workspace)
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
