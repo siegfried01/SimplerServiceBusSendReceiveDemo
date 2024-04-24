@@ -65,8 +65,13 @@ stages:
     strategy:
       runOnce:
         deploy:
-
           steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'Azure subscription 1 (acc26051-92a5-4ed1-a226-64a187bc27db)'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az deployment group create --name ServiceBusSimpleSendReceive --resource-group $(System.DefaultWorkingDirectory)/rg_ServiceBusSimpleSendReceive   --template-file  deploy-ServiceBusSimpleSendReceive.bicep'
           - task: AzureFunctionApp@1
             displayName: 'Azure functions app deploy'
             inputs:
@@ -74,3 +79,4 @@ stages:
               appType: functionApp
               appName: $(functionAppName)
               package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+              
