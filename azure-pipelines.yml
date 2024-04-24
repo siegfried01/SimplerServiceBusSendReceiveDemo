@@ -45,11 +45,15 @@ stages:
         archiveType: zip
         archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
         replaceExistingArchive: true
+    - task: CopyFiles@2
+      displayName: Copy Infrastructure files
+      inputs:
+       SourceFolder:  $(System.DefaultWorkingDirectory)/*.bicep
+       TargetFolder: $(Pipeline.Workspace)
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
-    - publish: $(System.DefaultWorkingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep
-      artifact: drop2
+
 
 - stage: Deploy
   displayName: Deploy stage
