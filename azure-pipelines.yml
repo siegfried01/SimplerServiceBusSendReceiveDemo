@@ -62,9 +62,9 @@ stages:
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
     - publish: $(workingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep
-      artifact: drop1
+      artifact: drop
     - publish: $(workingDirectory)/assignRbacRoleToFunctionApp.bicep
-      artifact: drop2
+      artifact: drop
 
 - stage: Deploy
   displayName: Deploy stage
@@ -89,8 +89,8 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                cp $(Pipeline.Workspace)/drop1/deploy-ServiceBusSimpleSendReceive.bicep $(Pipeline.Workspace)
-                cp $(Pipeline.Workspace)/drop2/assignRbacRoleToFunctionApp.bicep $(Pipeline.Workspace)
+                cp $(Pipeline.Workspace)/drop/deploy-ServiceBusSimpleSendReceive.bicep $(Pipeline.Workspace)
+                cp $(Pipeline.Workspace)/drop/assignRbacRoleToFunctionApp.bicep $(Pipeline.Workspace)
                 cd $(Pipeline.Workspace)
                 ls -al
                 az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  deploy-ServiceBusSimpleSendReceive.bicep
