@@ -45,6 +45,18 @@ stages:
         archiveType: zip
         archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
         replaceExistingArchive: true
+    - task: Bash@3
+      displayName: 'Confirm location of bicep files'
+      inputs:
+        targetType: 'inline'
+        script: |         
+          cd $(workingDirectory)
+          pwd
+          ls -al $(workingDirectory)
+          find . -name \*.bicep
+          cd $(System.DefaultWorkingDirectory)
+          pwd
+          find . -name \*.bicep
     - task: CopyFiles@2
       displayName: Copy Infrastructure files
       inputs:
