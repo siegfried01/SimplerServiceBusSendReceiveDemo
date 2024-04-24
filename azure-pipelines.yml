@@ -8,7 +8,7 @@
 
 variables:
   # Azure Resource Manager connection created during pipeline creation
-  azureSubscription: 'c4a0a507-c2ef-4704-80ee-c0b5723b89be'
+  azureSubscription: 'Siegfried Azure Connection'
 
   # Function app name
   functionAppName: '4n3tzjp5hf23g-func'
@@ -37,14 +37,6 @@ stages:
         projects: |
           $(workingDirectory)/*.csproj
         arguments: --output $(System.DefaultWorkingDirectory)/publish_output --configuration Release
-    - task: AzureCLI@2
-      displayName: 'Deploy Azure Resources with Azure Deployment Group'
-      inputs:
-        azureSubscription: 'Azure subscription 1 (acc26051-92a5-4ed1-a226-64a187bc27db)'
-        scriptType: 'pscore'
-        scriptLocation: 'inlineScript'
-        inlineScript: 'az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  $(System.DefaultWorkingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep'
-
     - task: ArchiveFiles@2
       displayName: 'Archive files'
       inputs:
@@ -56,6 +48,8 @@ stages:
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
+    - publish: $(System.DefaultWorkingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep
+      artifact: drop2
 
 - stage: Deploy
   displayName: Deploy stage
@@ -73,6 +67,14 @@ stages:
       runOnce:
         deploy:
           steps:
+          - task: AzureCLI@2
+            displayName: 'Deploy Azure Resources with Azure Deployment Group'
+            inputs:
+              azureSubscription: 'Siegfried Azure Connection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  $(Pipeline.Workspace)/drop2/deploy-ServiceBusSimpleSendReceive.bicep'
+
           - task: AzureFunctionApp@1
             displayName: 'Azure functions app deploy'
             inputs:
@@ -80,11 +82,4 @@ stages:
               appType: functionApp
               appName: $(functionAppName)
               package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
-          - task: AzureCLI@2
-            displayName: 'copy zip to the azure resource (function app)'
-            inputs:
-              azureSubscription: 'Azure subscription 1 (acc26051-92a5-4ed1-a226-64a187bc27db)'
-              scriptType: 'pscore'
-              scriptLocation: 'inlineScript'
-              inlineScript: 'az functionapp deployment source config-zip -g rg_ServiceBusSimpleSendReceive -n aryxbqmevvg3e-func --src (Pipeline.Workspace)/drop/$(Build.BuildId).zip'
               
