@@ -3,8 +3,8 @@
 # Add steps that analyze code, save build artifacts, deploy, and more:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/dotnet-core
 
-trigger:
-- master
+#trigger:
+#- master
 
 variables:
   # Azure Resource Manager connection created during pipeline creation
@@ -43,7 +43,7 @@ stages:
         azureSubscription: 'Azure subscription 1 (acc26051-92a5-4ed1-a226-64a187bc27db)'
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: 'az deployment group create --name ServiceBusSimpleSendReceive --resource-group $(System.DefaultWorkingDirectory)/rg_ServiceBusSimpleSendReceive   --template-file  deploy-ServiceBusSimpleSendReceive.bicep'
+        inlineScript: 'az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  $(System.DefaultWorkingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep'
 
     - task: ArchiveFiles@2
       displayName: 'Archive files'
