@@ -48,7 +48,7 @@ stages:
     - task: CopyFiles@2
       displayName: Copy Infrastructure files
       inputs:
-       SourceFolder:  $(System.DefaultWorkingDirectory)/*.bicep
+       SourceFolder:  $(workingDirectory)/*.bicep
        TargetFolder: $(Pipeline.Workspace)
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
