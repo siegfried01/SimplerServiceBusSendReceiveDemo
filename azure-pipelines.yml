@@ -3,12 +3,12 @@
 # Add steps that analyze code, save build artifacts, deploy, and more:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/dotnet-core
 
-trigger:
-- master
+#trigger:
+#- master
 
 variables:
   # Azure Resource Manager connection created during pipeline creation
-  azureSubscription: 'c4a0a507-c2ef-4704-80ee-c0b5723b89be'
+  azureSubscription: 'Siegfried Azure Connection'
 
   # Function app name
   functionAppName: '4n3tzjp5hf23g-func'
@@ -37,7 +37,6 @@ stages:
         projects: |
           $(workingDirectory)/*.csproj
         arguments: --output $(System.DefaultWorkingDirectory)/publish_output --configuration Release
-
     - task: ArchiveFiles@2
       displayName: 'Archive files'
       inputs:
@@ -46,8 +45,25 @@ stages:
         archiveType: zip
         archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
         replaceExistingArchive: true
+    - task: Bash@3
+      displayName: 'Confirm location of bicep files'
+      inputs:
+        targetType: 'inline'
+        script: |         
+          cd $(workingDirectory)
+          echo "show $PWD"
+          ls -al
+          find . -name \*.bicep
+          cp *.bicep $(Pipeline.Workspace)
+          cd $(Pipeline.Workspace)
+          echo "show pipeline.workspace"
+          ls -al
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+      artifact: drop
+    - publish: $(workingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep
+      artifact: drop
+    - publish: $(workingDirectory)/assignRbacRoleToFunctionApp.bicep
       artifact: drop
 
 - stage: Deploy
@@ -67,11 +83,18 @@ stages:
         deploy:
           steps:
           - task: AzureCLI@2
+            displayName: 'Deploy Azure Resources with Azure Deployment Group'
             inputs:
-              azureSubscription: 'Azure subscription 1 (acc26051-92a5-4ed1-a226-64a187bc27db)'
-              scriptType: 'pscore'
+              azureSubscription: 'Siegfried Azure Connection'
+              scriptType: 'bash'
               scriptLocation: 'inlineScript'
-              inlineScript: 'az deployment group create --name ServiceBusSimpleSendReceive --resource-group $(System.DefaultWorkingDirectory)/rg_ServiceBusSimpleSendReceive   --template-file  deploy-ServiceBusSimpleSendReceive.bicep'
+              inlineScript: |
+                cp $(Pipeline.Workspace)/drop/deploy-ServiceBusSimpleSendReceive.bicep $(Pipeline.Workspace)
+                cp $(Pipeline.Workspace)/drop/assignRbacRoleToFunctionApp.bicep $(Pipeline.Workspace)
+                cd $(Pipeline.Workspace)
+                ls -al
+                az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  deploy-ServiceBusSimpleSendReceive.bicep
+
           - task: AzureFunctionApp@1
             displayName: 'Azure functions app deploy'
             inputs:
