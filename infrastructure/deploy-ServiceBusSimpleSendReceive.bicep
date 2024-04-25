@@ -6,26 +6,18 @@
    export loc=westus2
    End common prolog commands
    
-   Begin commands to start server for executing this file using NodeJS with bash
-   echo sleep 60
-   sleep 60
-   echo sleep 60
-   sleep 60
-   echo sleep 60
-   sleep 60
-   echo az webapp log tail -g $rg -n "${random}-func"
-   az webapp log tail -g $rg -n "${random}-func"
-   End commands to start server for executing this file using NodeJS with bash
-
    emacs F10
    Begin commands to deploy this file using Azure CLI with bash
    #echo WaitForBuildComplete
    #WaitForBuildComplete
    #echo "Previous build is complete. Begin deployment build."
-   az deployment group create --name $name --resource-group $rg   --template-file  deploy-ServiceBusSimpleSendReceive.bicep
+   cd ..
+   az deployment group create --name $name --resource-group $rg   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep
    echo end deploy
    az resource list -g $rg --query "[?resourceGroup=='$rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table
    End commands to deploy this file using Azure CLI with bash
+
+   New-AzResourceGroupDeployment -name "ServiceBusSimpleSendReceive" -Mode "Incremental"  -TemplateFile deploy-ServiceBusSimpleSendReceive.bicep
 
    emacs ESC 2 F10
    Begin commands to shut down this deployment using Azure CLI with bash
