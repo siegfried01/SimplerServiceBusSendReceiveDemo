@@ -63,11 +63,11 @@ stages:
           echo "show pipeline/infrastructure"
           ls -al
 
-    - task: CopyFiles@2
-      displayName: Copy Infrastructure files
-      inputs:
-        SourceFolder: $(workingDirectory)/infrastructure
-        TargetFolder: $(Pipeline.Workspace)/infrastructure
+#    - task: CopyFiles@2
+#      displayName: Copy Infrastructure files
+#      inputs:
+#        SourceFolder: $(workingDirectory)/infrastructure
+#        TargetFolder: $(Pipeline.Workspace)/infrastructure
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
