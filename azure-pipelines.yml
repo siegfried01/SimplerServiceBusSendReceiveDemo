@@ -54,16 +54,20 @@ stages:
           echo "show $PWD"
           ls -al
           find . -name \*.bicep
-          cp *.bicep $(Pipeline.Workspace)
+          mkdir $(Pipeline.Workspace)/infrastructure
+          cp infrastructure/*.bicep $(Pipeline.Workspace)/infrastructure
           cd $(Pipeline.Workspace)
           echo "show pipeline.workspace"
+          ls -al
+          cd infrastructure
+          echo "show pipeline/infrastructure"
           ls -al
 
     - task: CopyFiles@2
       displayName: Copy Infrastructure files
       inputs:
         SourceFolder: $(workingDirectory)/infrastructure
-        TargetFolder: $(Pipeline.Workspace)infrastructure
+        TargetFolder: $(Pipeline.Workspace)/infrastructure
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
