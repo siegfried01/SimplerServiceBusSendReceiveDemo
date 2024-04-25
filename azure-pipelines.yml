@@ -39,6 +39,18 @@ stages:
         zipAfterPublish: true
         publishWebProjects: false
         modifyOutputPath: false
+    - task: Bash@3
+      displayName: 'Confirm location of bicep files'
+      inputs:
+        targetType: 'inline'
+        script: |
+          cd $(workingDirectory)
+          echo "show $PWD"
+          ls -al
+          find . -name \*.bicep
+          cd infrastructure
+          echo "show $PWD"
+          ls -al
     
     # copy files from the `infrastucture` folder to the newlycreated $(Build.BuildId)
     # folder. This will create the TargetFolder if it doesn't exist.
