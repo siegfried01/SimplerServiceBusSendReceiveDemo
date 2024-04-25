@@ -76,7 +76,7 @@ stages:
     - task: PublishPipelineArtifact@1
       displayName: Publish App and Infra
       inputs:
-        targetPath: $(Pipeline.Workspace)/outpublish/$(Build.BuildId)
+        targetPath: $(Pipeline.Workspace)/publish_output/$(Build.BuildId)
         artifact: drop
         publishLocation: pipeline
 
