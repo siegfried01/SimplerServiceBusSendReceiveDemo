@@ -71,8 +71,8 @@ stages:
 
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
-    - publish: $(workingDirectory)/infrastructure
-      artifact: drop
+#    - publish: $(workingDirectory)/infrastructure
+#      artifact: drop
 
 - stage: Deploy
   displayName: Deploy stage
