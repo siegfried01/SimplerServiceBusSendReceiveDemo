@@ -59,11 +59,15 @@ stages:
           echo "show pipeline.workspace"
           ls -al
 
+    - task: CopyFiles@2
+      displayName: Copy Infrastructure files
+      inputs:
+        SourceFolder: $(workingDirectory)/infrastructure
+        TargetFolder: $(Pipeline.Workspace)infrastructure
+
     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
       artifact: drop
-    - publish: $(workingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep
-      artifact: drop
-    - publish: $(workingDirectory)/assignRbacRoleToFunctionApp.bicep
+    - publish: $(workingDirectory)/infrastructure
       artifact: drop
 
 - stage: Deploy
@@ -89,11 +93,13 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                cp $(Pipeline.Workspace)/drop/deploy-ServiceBusSimpleSendReceive.bicep $(Pipeline.Workspace)
-                cp $(Pipeline.Workspace)/drop/assignRbacRoleToFunctionApp.bicep $(Pipeline.Workspace)
-                cd $(Pipeline.Workspace)
+                echo Show directory $PWD
                 ls -al
-                az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  deploy-ServiceBusSimpleSendReceive.bicep
+                cd infrastructure
+                echo Show directory $PWD
+                ls -al 
+                echo begin az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep
+                az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep
 
           - task: AzureFunctionApp@1
             displayName: 'Azure functions app deploy'
