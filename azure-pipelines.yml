@@ -105,19 +105,16 @@ stages:
             displayName: 'Deploy Azure Resources with Azure Deployment Group'
             inputs:
               azureSubscription: 'Siegfried Azure Connection'
-              scriptType: 'bash'
+              scriptType: 'pcore'
               scriptLocation: 'inlineScript'
               inlineScript: |
                 echo 'show default directory'
-                ls -al
-                echo 'Show Directory $(Pipeline.Workspace)'
-                ls -alR '$(Pipeline.Workspace)'
-                cd drop/infrastructure
+                ls 
+                cd $(Pipeline.Workspace)\drop\infrastructure
                 echo 'Show Directory $(PWD)'
-                pwd
-                ls -al
-                az deployment group create --name ServiceBusSimpleSendReceive \
-                  --resource-group rg_ServiceBusSimpleSendReceive \
+                ls 
+                az deployment group create --name ServiceBusSimpleSendReceive `
+                  --resource-group rg_ServiceBusSimpleSendReceive `
                   --template-file deploy-ServiceBusSimpleSendReceive.bicep
 
           # publishes the function app and restarts it.
