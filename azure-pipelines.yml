@@ -113,9 +113,7 @@ stages:
                 cd $(Pipeline.Workspace)\drop\infrastructure
                 echo 'Show Directory $(PWD)'
                 ls 
-                az deployment group create --name ServiceBusSimpleSendReceive \
-                  --resource-group rg_ServiceBusSimpleSendReceive \
-                  --template-file deploy-ServiceBusSimpleSendReceive.bicep
+                az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive --template-file deploy-ServiceBusSimpleSendReceive.bicep
 
           # publishes the function app and restarts it.
           - task: AzureFunctionApp@1
