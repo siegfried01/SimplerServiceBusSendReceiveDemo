@@ -110,7 +110,7 @@ stages:
               inlineScript: |
                 echo 'Show Directory $(Pipeline.Workspace)'
                 ls -alR '$(Pipeline.Workspace)'
-                cd $(Pipeline.Workspace)/drop/infrastructure)
+                cd $(Pipeline.Workspace)/drop/infrastructure
                 ls -al
                 az deployment group create --name ServiceBusSimpleSendReceive \
                   --resource-group rg_ServiceBusSimpleSendReceive \
