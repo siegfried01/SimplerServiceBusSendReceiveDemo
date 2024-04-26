@@ -108,6 +108,8 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
+                echo 'show default directory'
+                ls -al
                 echo 'Show Directory $(Pipeline.Workspace)'
                 ls -alR '$(Pipeline.Workspace)'
                 cd drop/infrastructure
