@@ -108,11 +108,13 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                echo 'Show Directory $PWD'
+                echo 'Show Directory $(Pipeline.Workspace)'
                 ls -alR '$(Pipeline.Workspace)'
+                cd $(Pipeline.Workspace)/drop/infrastructure)
+                ls -al
                 az deployment group create --name ServiceBusSimpleSendReceive \
                   --resource-group rg_ServiceBusSimpleSendReceive \
-                  --template-file $(Pipeline.Workspace)/drop/infrastructure/deploy-ServiceBusSimpleSendReceive.bicep
+                  --template-file deploy-ServiceBusSimpleSendReceive.bicep
 
           # publishes the function app and restarts it.
           - task: AzureFunctionApp@1
