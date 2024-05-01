@@ -90,16 +90,16 @@
    emacs ESC 8 F10
    Begin commands to deploy this file using Azure CLI with bash
    echo step 8
-   echo dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release --output ./publish-functionapp
-   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release --output ./publish-functionapp
+   echo dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release 
+   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release 
    End commands to deploy this file using Azure CLI with bash
 
    emacs ESC 9 F10
    Begin commands to deploy this file using Azure CLI with bash
    echo step 9
    pushd ./publish-functionapp
-   echo zip -r  ../publish-functionapp.zip .
-   zip -r  ../publish-functionapp.zip .
+   pushd c:/Users/v-richardsi/source/repos/SimplerServiceBusSendReceiveDemo/SimpleServiceBusSendReceiveAzureFuncs/bin/Release/net6.0
+   zip -r  ../../../../infrastructure/publish-functionapp.zip .
    popd
    End commands to deploy this file using Azure CLI with bash
 
