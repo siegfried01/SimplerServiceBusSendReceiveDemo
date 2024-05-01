@@ -27,7 +27,7 @@ public class SimpleServiceBusSenderReceiver
     [FunctionName("SimpleServiceBusReceiver")]
     public void Run([ServiceBusTrigger("mainqueue001", Connection = "ServiceBusConnection")] string myQueueItem, ILogger log)
     {
-        log.LogInformation($"Built at Tue Apr 23 09:36:11 2024 C# ServiceBus queue trigger function processed message: {myQueueItem}");
+        log.LogInformation($"Built at Wed May  1 12:32:59 2024 C# ServiceBus queue trigger function processed message: {myQueueItem}");
     }
     /*
     // https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-service-bus-output?tabs=python-v2%2Cin-process%2Cnodejs-v4%2Cextensionv5&pivots=programming-language-csharp

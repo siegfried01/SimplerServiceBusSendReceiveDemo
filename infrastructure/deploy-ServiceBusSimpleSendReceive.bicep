@@ -4,6 +4,10 @@
    export rg=rg_${name}
    export random=aryxbqmevvg3e
    export loc=westus2
+   export newDeploymentStorage="${random}stg"
+   export newDeploymentContainer="${random}cntr"
+   export subscriptionId=`az account show --query id --output tsv | tr -d '\r'`
+   export functionAppName=aryxbqmevvg3e-func
    End common prolog commands
    
    emacs F10
@@ -21,6 +25,7 @@
 
    emacs ESC 2 F10
    Begin commands to shut down this deployment using Azure CLI with bash
+   echo step 2
    #echo CreateBuildEvent.exe
    #CreateBuildEvent.exe&
    echo "begin shutdown"
@@ -32,6 +37,7 @@
 
    emacs ESC 3 F10
    Begin commands for one time initializations using Azure CLI with bash
+   echo step 3
    az group create -l $loc -n $rg
    echo "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
    cat >clear-resources.json <<EOF
@@ -43,12 +49,118 @@
    EOF
    End commands for one time initializations using Azure CLI with bash
 
+   // https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-cli%2Cwindows#use-the-azure-login-action-with-a-service-principal-secret
    emacs ESC 4 F10
+   Begin commands for one time initializations using Azure CLI with bash
+   echo step 4
+   export id=`az group show --name $rg --query 'id' --output tsv`
+   echo "id=$id"
+   export sp="spad_${name}"
+   echo az ad sp create-for-rbac --name $sp  --role contributor --scopes $id --json-auth
+   az ad sp create-for-rbac --name $sp  --role contributor --scopes $id --json-auth
+   echo "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
+   End commands for one time initializations using Azure CLI with bash
+
+   emacs ESC 5 F10
    Begin commands to deploy this file using Azure CLI with bash
+   echo step 5
+   az role assignment list --resource-group rg_ServiceBusSimpleSendReceive
+   End commands to deploy this file using Azure CLI with bash
+
+   This seems to work, how to I confirm it?
+   emacs ESC 6 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 6
+   $appid=`az ad sp list --display-name "spad_ServiceBusSimpleSendReceive" --query "[0].appId" --output tsv`
+   echo "appid=$appid"
+   az role assignment create --role "Contributor" --assignee $appid --scope "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_ServiceBusSimpleSendReceive"   
+   End commands to deploy this file using Azure CLI with bash
+
+   emacs ESC 7 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 7
+   echo newDeploymentStorage  = $newDeploymentStorage
+   echo newDeploymentContainer = $newDeploymentContainer
+   echo subscriptionId = $subscriptionId
+   echo rg = $rg
+   echo az ad sp create-for-rbac --name $functionAppName --role contributor --scopes /subscriptions/$subscriptionId/resourceGroups/$rg --sdk-auth 
+   az ad sp create-for-rbac --name aryxbqmevvg3e-func --role contributor --scopes /subscriptions/$subscriptionId/resourceGroups/$rg --sdk-auth 
+   End commands to deploy this file using Azure CLI with bash
+
+   emacs ESC 8 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 8
+   echo dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release --output ./publish-functionapp
+   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release --output ./publish-functionapp
+   End commands to deploy this file using Azure CLI with bash
+
+   emacs ESC 9 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 9
+   pushd ./publish-functionapp
+   echo zip -r  ../publish-functionapp.zip .
+   zip -r  ../publish-functionapp.zip .
+   popd
+   End commands to deploy this file using Azure CLI with bash
+
+   emacs ESC 10 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 10
+   echo az functionapp deployment source config-zip -g $rg -n $functionAppName --src ./publish-functionapp.zip
+   az functionapp deployment source config-zip -g $rg -n $functionAppName --src ./publish-functionapp.zip
+   End commands to deploy this file using Azure CLI with bash
+
+   az functionapp deployment source config-zip -g rg_ServiceBusSimpleSendReceive -n aryxbqmevvg3e-func --src ./publish-functionapp.zip
+   WARNING: Getting scm site credentials for zip deployment
+   WARNING: Starting zip deployment. This operation can take a while to complete ...
+   WARNING: Deployment endpoint responded with status code 202
+   {
+     "active": true,
+     "author": "N/A",
+     "author_email": "N/A",
+     "complete": true,
+     "deployer": "az_cli_functions",
+     "end_time": "2024-05-01T17:54:55.0426584Z",
+     "id": "5231f5204ffb469fbc107020dab0b232",
+     "is_readonly": true,
+     "is_temp": false,
+     "last_success_end_time": "2024-05-01T17:54:55.0426584Z",
+     "log_url": "https://aryxbqmevvg3e-func.scm.azurewebsites.net/api/deployments/latest/log",
+     "message": "Created via a push deployment",
+     "progress": "",
+     "provisioningState": "Succeeded",
+     "received_time": "2024-05-01T17:54:54.5740244Z",
+     "site_name": "aryxbqmevvg3e-func",
+     "start_time": "2024-05-01T17:54:54.7301599Z",
+     "status": 4,
+     "status_text": "",
+     "url": "https://aryxbqmevvg3e-func.scm.azurewebsites.net/api/deployments/latest"
+   }
+
+
+   emacs ESC 11 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 11
+   az ad sp list  --query "[].{SPname:displayName, SPid:appId, tenant:appOwnerOrganizationId}" --output table | tr -d '\r'
+   End commands to deploy this file using Azure CLI with bash
+
+   emacs ESC 12 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 12
+   echo az ad sp delete --id fa61738f-f3ce-4246-b6f5-aa966dcc162d
+   az ad sp delete --id fa61738f-f3ce-4246-b6f5-aa966dcc162d
+   End commands to deploy this file using Azure CLI with bash
+
+   emacs ESC 13 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 13
    echo az webapp log tail -g $rg -n "${random}-func"
    az webapp log tail -g $rg -n "${random}-func"
    End commands to deploy this file using Azure CLI with bash
-
+   
+   Begin common epilog commands
+   az resource list -g $rg --query "[?resourceGroup=='$rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table | tr -d '\r'
+   End common epilog commands
 
 
  */
