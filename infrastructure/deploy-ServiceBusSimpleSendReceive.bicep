@@ -90,22 +90,38 @@
    emacs ESC 8 F10
    Begin commands to deploy this file using Azure CLI with bash
    echo step 8
-   echo dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release 
-   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release 
+   echo dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net6.0  --self-contained --output ./publish-functionapp
+   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net6.0 --self-contained --output ./publish-functionapp
    End commands to deploy this file using Azure CLI with bash
 
    emacs ESC 9 F10
    Begin commands to deploy this file using Azure CLI with bash
    echo step 9
    pushd ./publish-functionapp
-   pushd c:/Users/v-richardsi/source/repos/SimplerServiceBusSendReceiveDemo/SimpleServiceBusSendReceiveAzureFuncs/bin/Release/net6.0
-   zip -r  ../../../../infrastructure/publish-functionapp.zip .
+   #pushd c:/Users/shein/source/repos/SimplerServiceBusSendReceiveDemo/SimpleServiceBusSendReceiveAzureFuncs/bin/Release/net6.0
+   echo zip -r  ../publish-functionapp.zip .
+   zip -r  ../publish-functionapp.zip .
+   #zip -r  ../../../../infrastructure/publish-functionapp.zip .
    popd
    End commands to deploy this file using Azure CLI with bash
 
    emacs ESC 10 F10
    Begin commands to deploy this file using Azure CLI with bash
    echo step 10
+   echo az functionapp list-runtimes
+   az functionapp list-runtimes | tr -d '\r'
+   End commands to deploy this file using Azure CLI with bash
+
+   emacs ESC 11 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 11
+   echo az functionapp config set --name $functionAppName --resource-group $rg --net-framework-version 6
+   az functionapp config set --name $functionAppName --resource-group $rg --net-framework-version 6
+   End commands to deploy this file using Azure CLI with bash
+
+   emacs ESC 12 F10
+   Begin commands to deploy this file using Azure CLI with bash
+   echo step 12
    echo az functionapp deployment source config-zip -g $rg -n $functionAppName --src ./publish-functionapp.zip
    az functionapp deployment source config-zip -g $rg -n $functionAppName --src ./publish-functionapp.zip
    End commands to deploy this file using Azure CLI with bash
@@ -138,22 +154,22 @@
    }
 
 
-   emacs ESC 11 F10
+   emacs ESC 13 F10
    Begin commands to deploy this file using Azure CLI with bash
-   echo step 11
+   echo step 13
    az ad sp list  --query "[].{SPname:displayName, SPid:appId, tenant:appOwnerOrganizationId}" --output table | tr -d '\r'
    End commands to deploy this file using Azure CLI with bash
 
-   emacs ESC 12 F10
+   emacs ESC 14 F10
    Begin commands to deploy this file using Azure CLI with bash
-   echo step 12
+   echo step 14
    echo az ad sp delete --id fa61738f-f3ce-4246-b6f5-aa966dcc162d
    az ad sp delete --id fa61738f-f3ce-4246-b6f5-aa966dcc162d
    End commands to deploy this file using Azure CLI with bash
 
-   emacs ESC 13 F10
+   emacs ESC 15 F10
    Begin commands to deploy this file using Azure CLI with bash
-   echo step 13
+   echo step 15
    echo az webapp log tail -g $rg -n "${random}-func"
    az webapp log tail -g $rg -n "${random}-func"
    End commands to deploy this file using Azure CLI with bash
