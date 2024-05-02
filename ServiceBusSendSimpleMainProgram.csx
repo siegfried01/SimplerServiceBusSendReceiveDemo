@@ -40,21 +40,22 @@ var clientOptions = new ServiceBusClientOptions()
 client = new ServiceBusClient(connectionString, clientOptions);
 sender = client.CreateSender(queueName);
 int count = 0;
-if(System.IO.File.Exists("log.txt"))
+string logSequenceNumberFileName = "log-sequence-number.txt";
+if(System.IO.File.Exists(logSequenceNumberFileName))
 {
-    if(int.TryParse(System.IO.File.ReadAllText("log.txt"), out count))
+    if(int.TryParse(System.IO.File.ReadAllText(logSequenceNumberFileName), out count))
     {
         count++;
-        System.IO.File.WriteAllText("log.txt", count.ToString());
+        System.IO.File.WriteAllText(logSequenceNumberFileName, count.ToString());
     }
     else
     {
-        System.IO.File.WriteAllText("log.txt", "0" + Environment.NewLine);
+        System.IO.File.WriteAllText(logSequenceNumberFileName, "0" + Environment.NewLine);
     }            
 }
 else
 {
-    System.IO.File.WriteAllText("log.txt", "0" + Environment.NewLine);
+    System.IO.File.WriteAllText(logSequenceNumberFileName, "0" + Environment.NewLine);
 }
 
 WriteLine($"Write to queue={queueName} in ns={spaceName} cn={connectionString} count={count}");
