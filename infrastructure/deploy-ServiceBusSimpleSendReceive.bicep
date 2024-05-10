@@ -1,187 +1,86 @@
 /*
    Begin common prolog commands
-   export name=ServiceBusSimpleSendReceive
-   export rg=rg_${name}
-   export random=aryxbqmevvg3e
-   export loc=westus2
-   export newDeploymentStorage="${random}stg"
-   export newDeploymentContainer="${random}cntr"
-   export subscriptionId=`az account show --query id --output tsv | tr -d '\r'`
-   export functionAppName=aryxbqmevvg3e-func
+   $env:name="ServiceBusSimpleSendReceive"
+   $env:rg="rg_$env:name"
+   $env:random="aryxbqmevvg3e"
+   $env:loc="westus2"
+   $env:newDeploymentStorage="${random}stg"
+   $env:newDeploymentContainer="${random}cntr"
+   $env:subscriptionId=(az account show --query id --output tsv | tr -d '\r')
+   $env:functionAppName="aryxbqmevvg3e-func"
    End common prolog commands
    
    emacs F10
-   Begin commands to deploy this file using Azure CLI with bash
-   #echo WaitForBuildComplete
-   #WaitForBuildComplete
-   #echo "Previous build is complete. Begin deployment build."
+   Begin commands to deploy this file using Azure CLI with PowerShell
    cd ..
-   az deployment group create --name $name --resource-group $rg   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep
-   echo end deploy
-   az resource list -g $rg --query "[?resourceGroup=='$rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table
-   End commands to deploy this file using Azure CLI with bash
+   write-output "az deployment group create --name $env:name --resource-group $env:rg   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep"
+   az deployment group create --name $env:name --resource-group $env:rg   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep
+   write-output "end deploy"
+   End commands to deploy this file using Azure CLI with PowerShell
 
    New-AzResourceGroupDeployment -name "ServiceBusSimpleSendReceive" -Mode "Incremental"  -TemplateFile deploy-ServiceBusSimpleSendReceive.bicep
 
    emacs ESC 2 F10
-   Begin commands to shut down this deployment using Azure CLI with bash
-   echo step 2
-   #echo CreateBuildEvent.exe
-   #CreateBuildEvent.exe&
-   echo "begin shutdown"
-   az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $rg
-   #BuildIsComplete.exe
-   az resource list -g $rg --query "[?resourceGroup=='$rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table
-   echo "showdown is complete"
-   End commands to shut down this deployment using Azure CLI with bash
+   Begin commands to shut down this deployment using Azure CLI with PowerShell
+   write-output "step 2"
+   write-output "begin shutdown"
+   write-output "az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg"
+   az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg
+   write-output "showdown is complete"
+   End commands to shut down this deployment using Azure CLI with PowerShell
 
    emacs ESC 3 F10
-   Begin commands for one time initializations using Azure CLI with bash
-   echo step 3
+   Begin commands for one time initializations using Azure CLI with PowerShell
+   write-output "step 3"
    az group create -l $loc -n $rg
-   echo "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
-   cat >clear-resources.json <<EOF
-   {
-    "\$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-     "contentVersion": "1.0.0.0",
-     "resources": [] 
-   }
-   EOF
-   End commands for one time initializations using Azure CLI with bash
+   write-output "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
+   write-output "{`n`"`$schema`": `"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#`",`n `"contentVersion`": `"1.0.0.0`",`n `"resources`": [] `n}" | Out-File -FilePath clear-resources.json
+   End commands for one time initializations using Azure CLI with PowerShell
 
-   // https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-cli%2Cwindows#use-the-azure-login-action-with-a-service-principal-secret
    emacs ESC 4 F10
-   Begin commands for one time initializations using Azure CLI with bash
-   echo step 4
-   export id=`az group show --name $rg --query 'id' --output tsv`
-   echo "id=$id"
-   export sp="spad_${name}"
-   echo az ad sp create-for-rbac --name $sp  --role contributor --scopes $id --json-auth
-   az ad sp create-for-rbac --name $sp  --role contributor --scopes $id --json-auth
-   echo "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
-   End commands for one time initializations using Azure CLI with bash
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 4 Publish"
+   write-output "dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0  --self-contained --output ./publish-functionapp"
+   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0 --self-contained --output ./publish-functionapp
+   End commands to deploy this file using Azure CLI with PowerShell
 
    emacs ESC 5 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 5
-   az role assignment list --resource-group rg_ServiceBusSimpleSendReceive
-   End commands to deploy this file using Azure CLI with bash
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 5 zip"
+   pushd ./publish-functionapp
+   write-output "zip -r  ../publish-functionapp.zip ."
+   zip -r  ../publish-functionapp.zip .
+   popd
+   End commands to deploy this file using Azure CLI with PowerShell
 
-   This seems to work, how to I confirm it?
+   https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows
+
    emacs ESC 6 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 6
-   $appid=`az ad sp list --display-name "spad_ServiceBusSimpleSendReceive" --query "[0].appId" --output tsv`
-   echo "appid=$appid"
-   az role assignment create --role "Contributor" --assignee $appid --scope "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_ServiceBusSimpleSendReceive"   
-   End commands to deploy this file using Azure CLI with bash
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 6 configure function app"
+   write-output "az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings 'WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1'"
+   az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1
+   write-output "az functionapp config set -g $env:rg -n $env:functionAppName --net-framework-version 'v8.0'"
+   az functionapp config set -g $env:rg -n $env:functionAppName --net-framework-version v8.0
+   write-output "az functionapp config set -g $env:rg -n $env:functionAppName --use-32bit-worker-process false"
+   az functionapp config set -g $env:rg -n $env:functionAppName --use-32bit-worker-process false
+   write-output "az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings FUNCTIONS_EXTENSION_VERSION=~4"
+   az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings FUNCTIONS_EXTENSION_VERSION=~4
+   End commands to deploy this file using Azure CLI with PowerShell
 
    emacs ESC 7 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 7
-   echo newDeploymentStorage  = $newDeploymentStorage
-   echo newDeploymentContainer = $newDeploymentContainer
-   echo subscriptionId = $subscriptionId
-   echo rg = $rg
-   echo az ad sp create-for-rbac --name $functionAppName --role contributor --scopes /subscriptions/$subscriptionId/resourceGroups/$rg --sdk-auth 
-   az ad sp create-for-rbac --name aryxbqmevvg3e-func --role contributor --scopes /subscriptions/$subscriptionId/resourceGroups/$rg --sdk-auth 
-   End commands to deploy this file using Azure CLI with bash
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 7 deploy compiled #C code deployment to azure resource"
+   write-output "az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip"
+   az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip
+   End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 8 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 8
-   echo dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net6.0  --self-contained --output ./publish-functionapp
-   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net6.0 --self-contained --output ./publish-functionapp
-   End commands to deploy this file using Azure CLI with bash
-
-   emacs ESC 9 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 9
-   pushd ./publish-functionapp
-   #pushd c:/Users/shein/source/repos/SimplerServiceBusSendReceiveDemo/SimpleServiceBusSendReceiveAzureFuncs/bin/Release/net6.0
-   echo zip -r  ../publish-functionapp.zip .
-   zip -r  ../publish-functionapp.zip .
-   #zip -r  ../../../../infrastructure/publish-functionapp.zip .
-   popd
-   End commands to deploy this file using Azure CLI with bash
-
-   emacs ESC 10 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 10
-   echo az functionapp list-runtimes
-   az functionapp list-runtimes | tr -d '\r'
-   End commands to deploy this file using Azure CLI with bash
-
-   emacs ESC 11 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 11
-   echo az functionapp config set --name $functionAppName --resource-group $rg --net-framework-version 6
-   az functionapp config set --name $functionAppName --resource-group $rg --net-framework-version 6
-   End commands to deploy this file using Azure CLI with bash
-
-   emacs ESC 12 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 12
-   echo az functionapp deployment source config-zip -g $rg -n $functionAppName --src ./publish-functionapp.zip
-   az functionapp deployment source config-zip -g $rg -n $functionAppName --src ./publish-functionapp.zip
-   End commands to deploy this file using Azure CLI with bash
-
-   az functionapp deployment source config-zip -g rg_ServiceBusSimpleSendReceive -n aryxbqmevvg3e-func --src ./publish-functionapp.zip
-   WARNING: Getting scm site credentials for zip deployment
-   WARNING: Starting zip deployment. This operation can take a while to complete ...
-   WARNING: Deployment endpoint responded with status code 202
-   {
-     "active": true,
-     "author": "N/A",
-     "author_email": "N/A",
-     "complete": true,
-     "deployer": "az_cli_functions",
-     "end_time": "2024-05-01T17:54:55.0426584Z",
-     "id": "5231f5204ffb469fbc107020dab0b232",
-     "is_readonly": true,
-     "is_temp": false,
-     "last_success_end_time": "2024-05-01T17:54:55.0426584Z",
-     "log_url": "https://aryxbqmevvg3e-func.scm.azurewebsites.net/api/deployments/latest/log",
-     "message": "Created via a push deployment",
-     "progress": "",
-     "provisioningState": "Succeeded",
-     "received_time": "2024-05-01T17:54:54.5740244Z",
-     "site_name": "aryxbqmevvg3e-func",
-     "start_time": "2024-05-01T17:54:54.7301599Z",
-     "status": 4,
-     "status_text": "",
-     "url": "https://aryxbqmevvg3e-func.scm.azurewebsites.net/api/deployments/latest"
-   }
-
-
-   emacs ESC 13 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 13
-   az ad sp list  --query "[].{SPname:displayName, SPid:appId, tenant:appOwnerOrganizationId}" --output table | tr -d '\r'
-   End commands to deploy this file using Azure CLI with bash
-
-   emacs ESC 14 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 14
-   echo az ad sp delete --id fa61738f-f3ce-4246-b6f5-aa966dcc162d
-   az ad sp delete --id fa61738f-f3ce-4246-b6f5-aa966dcc162d
-   End commands to deploy this file using Azure CLI with bash
-
-   emacs ESC 15 F10
-   Begin commands to deploy this file using Azure CLI with bash
-   echo step 15
-   echo az webapp log tail -g $rg -n "${random}-func"
-   az webapp log tail -g $rg -n "${random}-func"
-   End commands to deploy this file using Azure CLI with bash
-   
    Begin common epilog commands
-   az resource list -g $rg --query "[?resourceGroup=='$rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table | tr -d '\r'
+   Get-AzResource -ResourceGroupName $env:rg | ft
    End common epilog commands
 
 
  */
-
-
 
 param queueName string = 'mainqueue001'
 param loc string = resourceGroup().location
@@ -262,7 +161,7 @@ output queue string = sbQueue.name
 
 
 param ServiceBusSenderReceiverPlans string = '${name}-func'
-resource func_plan 'Microsoft.Web/serverfarms@2023-01-01' = {
+resource functionPlan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: '${name}-func-plan'
   location: loc
   sku: {
@@ -308,7 +207,7 @@ resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
         hostType: 'Repository'
       }
     ]
-    serverFarmId: func_plan.id
+    serverFarmId: functionPlan.id
     reserved: false
     isXenon: false
     hyperV: false
@@ -335,7 +234,8 @@ resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
       connectionStrings: [
         {
           type: 'Custom'
-          connectionString: serviceBusConnectionViaMSI
+          //connectionString: serviceBusConnectionViaMSI
+          connectionString: serviceBusConnection
           name: 'ServiceBusConnection'
         }
       ]
@@ -495,24 +395,6 @@ module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = {
     functionPrincipalId: ServiceBusSenderReceiverFunctions.identity.principalId
   }
 }
-
-@description('The URL for the GitHub repository that contains the project to deploy.')
-param repoURL string = 'https://github.com/siegfried01/SimplerServiceBusSendReceiveDemo.git'
-
-@description('The branch of the GitHub repository to use.')
-param branch string = 'master'
-
-
-// this only works for a single csproj file in the top level of the repo.
-// resource siteName_web 'Microsoft.Web/sites/sourcecontrols@2022-09-01' = {    
-//   parent: ServiceBusSenderReceiverFunctions
-//   name: 'web'
-//   properties: {
-//       repoUrl: repoURL
-//       branch: branch
-//       isManualIntegration: false
-//   }
-// }
 
 
 
