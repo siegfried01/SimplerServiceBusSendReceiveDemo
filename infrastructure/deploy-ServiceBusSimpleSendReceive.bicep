@@ -32,7 +32,8 @@
    emacs ESC 3 F10
    Begin commands for one time initializations using Azure CLI with PowerShell
    write-output "step 3"
-   az group create -l $loc -n $rg
+   write-output "az group create -l $env:loc -n $env:rg"
+   az group create -l $env:loc -n $env:rg
    write-output "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
    write-output "{`n`"`$schema`": `"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#`",`n `"contentVersion`": `"1.0.0.0`",`n `"resources`": [] `n}" | Out-File -FilePath clear-resources.json
    End commands for one time initializations using Azure CLI with PowerShell
@@ -77,6 +78,7 @@
 
    Begin common epilog commands
    Get-AzResource -ResourceGroupName $env:rg | ft
+   write-output "all done"
    End common epilog commands
 
 
