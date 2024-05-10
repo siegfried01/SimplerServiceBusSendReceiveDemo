@@ -1,20 +1,23 @@
 /*
    Begin common prolog commands
-   $env:name="ServiceBusSimpleSendReceive"
-   $env:rg="rg_$env:name"
-   $env:random="aryxbqmevvg3e"
-   $env:loc="westus2"
-   $env:newDeploymentStorage="${random}stg"
-   $env:newDeploymentContainer="${random}cntr"
    $env:subscriptionId=(az account show --query id --output tsv | tr -d '\r')
-   $env:functionAppName="aryxbqmevvg3e-func"
+   $corpNet=($env:subscriptionId -eq "13c9725f-d20a-4c99-8ef4-d7bb78f98cff")
+   write-output $corpNet
+   $env:name=$(If ($corpNet) { "siegfriedServiceBusSimpleSendReceive"} Else {"ServiceBusSimpleSendReceive"} )
+   $env:rg="rg_$env:name"
+   write-output "resource group=$env:rg"
+   $env:random=$(If ($corpNet) {"l2ydjsjlzxaoe"} Else { "aryxbqmevvg3e" })
+   $env:loc="westus2"
+   $env:funcLoc=$(If ($corpNet) {"eastus2"} Else { $env:loc })
+   $env:functionAppName="$($env:random)-func"
+   write-output "func=$env:functionAppName"
    End common prolog commands
    
    emacs F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    cd ..
    write-output "az deployment group create --name $env:name --resource-group $env:rg   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep"
-   az deployment group create --name $env:name --resource-group $env:rg   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep
+   az deployment group create --name $env:name --resource-group $env:rg  --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep --parameters "{'funcLoc': {'value': 'eastus2'}}" "{'corpNet': {'value': $corpNet}}" 
    write-output "end deploy"
    End commands to deploy this file using Azure CLI with PowerShell
 
@@ -76,8 +79,16 @@
    az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip
    End commands to deploy this file using Azure CLI with PowerShell
 
+   emacs ESC 8 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 8 get the logs"
+   write-output "curl -X GET 'https://$($env:random)-func.scm.azurewebsites.net/api/dump'"
+   curl  "https://$($env:random)-func.scm.azurewebsites.net/api/dump"
+   dir
+   End commands to deploy this file using Azure CLI with PowerShell
+
    Begin common epilog commands
-   Get-AzResource -ResourceGroupName $env:rg | ft
+   #Get-AzResource -ResourceGroupName $env:rg | ft
    write-output "all done"
    End common epilog commands
 
@@ -86,8 +97,13 @@
 
 param queueName string = 'mainqueue001'
 param loc string = resourceGroup().location
+param funcLoc string = loc
+param corpNet bool = false
 param name string = uniqueString(resourceGroup().id)
 param sbdemo001NS_name string = '${name}-servicebus'
+
+
+
 
 resource sbnsSimpleSendReceiveDemo 'Microsoft.ServiceBus/namespaces@2022-01-01-preview' = {
   name: sbdemo001NS_name
@@ -160,12 +176,13 @@ output outputServiceBusConnectionViaMSI string = serviceBusConnectionViaMSI
 output serviceBusConnectionString string = serviceBusConnection
 output busNS string = sbdemo001NS_name
 output queue string = sbQueue.name
+output corpNetoutput bool = corpNet
 
 
 param ServiceBusSenderReceiverPlans string = '${name}-func'
 resource functionPlan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: '${name}-func-plan'
-  location: loc
+  location: funcLoc
   sku: {
     name: 'Y1'
     tier: 'Dynamic'
@@ -190,7 +207,7 @@ resource functionPlan 'Microsoft.Web/serverfarms@2023-01-01' = {
 
 resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
   name: ServiceBusSenderReceiverPlans
-  location: loc
+  location: funcLoc
   kind: 'functionapp'
   identity:{
     type: 'SystemAssigned'
@@ -236,8 +253,7 @@ resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
       connectionStrings: [
         {
           type: 'Custom'
-          //connectionString: serviceBusConnectionViaMSI
-          connectionString: serviceBusConnection
+          connectionString: corpNet? serviceBusConnection : serviceBusConnectionViaMSI
           name: 'ServiceBusConnection'
         }
       ]
@@ -388,11 +404,11 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_sites_SimpleServiceBusRec
   }
 }
 
-module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = {
 
+module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!corpNet) {
   name: 'assign-role-to-functionApp'
   params: {
-	roleScope: '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_ServiceBusSimpleSendReceive'
+	roleScope: resourceGroup().id
 	functionAppName: ServiceBusSenderReceiverFunctions.name
     functionPrincipalId: ServiceBusSenderReceiverFunctions.identity.principalId
   }
