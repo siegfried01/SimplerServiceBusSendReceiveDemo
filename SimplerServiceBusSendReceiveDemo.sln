@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34804.81
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimplerServiceBusSendReceiveDemo", "SimplerServiceBusSendReceiveDemo.csproj", "{F9360942-28EA-4C42-AC82-50D719219E1E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F9360942-28EA-4C42-AC82-50D719219E1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9360942-28EA-4C42-AC82-50D719219E1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9360942-28EA-4C42-AC82-50D719219E1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9360942-28EA-4C42-AC82-50D719219E1E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3DEF75FD-4CD7-4394-8F08-16C7D9CAACA5}
+	EndGlobalSection
+EndGlobal
