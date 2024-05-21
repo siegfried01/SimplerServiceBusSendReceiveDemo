@@ -8,7 +8,7 @@
 
 variables:
   # Azure Resource Manager connection created during pipeline creation
-  azureSubscription: 'c4a0a507-c2ef-4704-80ee-c0b5723b89be'
+  azureSubscription: 'Siegfried Azure Connection'
 
   # Function app name
   functionAppName: '4n3tzjp5hf23g-func'
@@ -17,62 +17,105 @@ variables:
   vmImageName: 'windows-2019'
 
   # Working Directory
-  workingDirectory: '$(System.DefaultWorkingDirectory)/SimpleServiceBusSendReceiveAzureFuncs'
+  workingDirectory: '$(System.DefaultWorkingDirectory)'
 
 stages:
 - stage: Build
   displayName: Build stage
-
   jobs:
   - job: Build
     displayName: Build
     pool:
       vmImage: $(vmImageName)
-
     steps:
+    # Builds in release, and then outputs the files to a new location
+    # and then zips it to a file with the name $(Build.BuildId).zip
     - task: DotNetCoreCLI@2
-      displayName: Build
+      displayName: Build and Zip Function
       inputs:
-        command: 'build'
-        projects: |
-          $(workingDirectory)/*.csproj
-        arguments: --output $(System.DefaultWorkingDirectory)/publish_output --configuration Release
-    - task: AzureCLI@2
-      displayName: 'Deploy Azure Resources with Azure Deployment Group'
+        command: publish
+        workingDirectory: $(workingDirectory)
+        arguments: '--configuration Release --nologo --output $(Pipeline.Workspace)/publish_output/$(Build.BuildId)'
+        zipAfterPublish: true
+        publishWebProjects: false
+        modifyOutputPath: false
+    - task: Bash@3
+      displayName: 'Confirm location of bicep files'
       inputs:
-        azureSubscription: 'Azure subscription 1 (acc26051-92a5-4ed1-a226-64a187bc27db)'
-        scriptType: 'pscore'
-        scriptLocation: 'inlineScript'
-        inlineScript: 'az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive   --template-file  $(System.DefaultWorkingDirectory)/deploy-ServiceBusSimpleSendReceive.bicep'
+        targetType: 'inline'
+        script: |
+          cd $(workingDirectory)
+          echo "show $PWD"
+          ls -al
+          find . -name \*.bicep
+          cd infrastructure
+          echo "show $PWD"
+          ls -al
+    
+    # copy files from the `infrastucture` folder to the newlycreated $(Build.BuildId)
+    # folder. This will create the TargetFolder if it doesn't exist.
+    - task: CopyFiles@2
+      displayName: Copy Infrastructure files
+      inputs:
+        SourceFolder: $(workingDirectory)/infrastructure
+        TargetFolder: $(Pipeline.Workspace)/publish_output/$(Build.BuildId)/infrastructure
 
-    - task: ArchiveFiles@2
-      displayName: 'Archive files'
+    # if you want the warm and fuzzies, this should list recursively 
+    # all the files in the $(Build.BuildId) folder.
+    - task: Bash@3
+      displayName: 'Confirm location of bicep files'
       inputs:
-        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/publish_output'
-        includeRootFolder: false
-        archiveType: zip
-        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-        replaceExistingArchive: true
+        targetType: 'inline'
+        script: |
+          echo "Show all contents of the output folder"
+          ls -alR '$(Pipeline.Workspace)/publish_output/$(Build.BuildId)'
 
-    - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
-      artifact: drop
+    # copy all the files in the $(Build.BuildId) folder to the pipeline
+    # storage area. You can verify this by looking at the published artifacts
+    # tab on a successful build.
+    - task: PublishPipelineArtifact@1
+      displayName: Publish App and Infra
+      inputs:
+        targetPath: $(Pipeline.Workspace)/publish_output/$(Build.BuildId)
+        artifact: drop
+        publishLocation: pipeline
 
 - stage: Deploy
   displayName: Deploy stage
-  dependsOn: Build
+  dependsOn:
+  - Build
   condition: succeeded()
-
   jobs:
   - deployment: Deploy
     displayName: Deploy
-    environment: 'development'
+    environment:
+      name: 'development'
     pool:
       vmImage: $(vmImageName)
-
     strategy:
       runOnce:
         deploy:
           steps:
+          # This task will assume that the provided group already exists. 
+          # That's a manual process though, unless there is some other
+          # automation that creates it for you. If it needs to be manually 
+          # created, then you need to come up with a subscription deployment
+          # rather than a group deployment.
+          - task: AzureCLI@2
+            displayName: 'Deploy Azure Resources with Azure Deployment Group'
+            inputs:
+              azureSubscription: 'Siegfried Azure Connection'
+              scriptType: 'pcore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo 'show default directory'
+                ls 
+                cd $(Pipeline.Workspace)\drop\infrastructure
+                echo 'Show Directory $(PWD)'
+                ls 
+                az deployment group create --name ServiceBusSimpleSendReceive --resource-group rg_ServiceBusSimpleSendReceive --template-file deploy-ServiceBusSimpleSendReceive.bicep
+
+          # publishes the function app and restarts it.
           - task: AzureFunctionApp@1
             displayName: 'Azure functions app deploy'
             inputs:
@@ -80,11 +123,3 @@ stages:
               appType: functionApp
               appName: $(functionAppName)
               package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
-          - task: AzureCLI@2
-            displayName: 'copy zip to the azure resource (function app)'
-            inputs:
-              azureSubscription: 'Azure subscription 1 (acc26051-92a5-4ed1-a226-64a187bc27db)'
-              scriptType: 'pscore'
-              scriptLocation: 'inlineScript'
-              inlineScript: 'az functionapp deployment source config-zip -g rg_ServiceBusSimpleSendReceive -n aryxbqmevvg3e-func --src (Pipeline.Workspace)/drop/$(Build.BuildId).zip'
-              

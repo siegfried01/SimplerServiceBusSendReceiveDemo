@@ -21,7 +21,7 @@ public class SimpleServiceBusSenderReceiver
         ServiceBusReceivedMessage message,
         ServiceBusMessageActions messageActions)
     {
-        _logger.LogInformation("Built at Mon May 20 21:33:41 2024 Message ID: {id} Body: {body} Content-type: {contentType}", message.MessageId, message.Body, message.ContentType);
+        _logger.LogInformation("Built at Tue May 21 05:03:13 2024 Message ID: {id} Body: {body} Content-type: {contentType}", message.MessageId, message.Body, message.ContentType);
 
         // Complete the message
         await messageActions.CompleteMessageAsync(message);

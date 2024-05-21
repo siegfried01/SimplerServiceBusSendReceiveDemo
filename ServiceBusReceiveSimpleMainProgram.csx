@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using static System.Environment;
 using static System.Console;
-
 string connectionString = GetEnvironmentVariable("serviceBusConnectionString");
 string spaceName = GetEnvironmentVariable("busNS");
 string queueName = GetEnvironmentVariable("queue");

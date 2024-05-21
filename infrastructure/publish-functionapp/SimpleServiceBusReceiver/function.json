@@ -1,0 +1,17 @@
+{
+  "generatedBy": "Microsoft.NET.Sdk.Functions.Generator-4.2.0",
+  "configurationSource": "attributes",
+  "bindings": [
+    {
+      "type": "serviceBusTrigger",
+      "connection": "ServiceBusConnection",
+      "queueName": "mainqueue001",
+      "isSessionsEnabled": false,
+      "autoComplete": true,
+      "name": "myQueueItem"
+    }
+  ],
+  "disabled": false,
+  "scriptFile": "../bin/SimpleServiceBusSendReceiveAzureFuncs.dll",
+  "entryPoint": "SimpleServiceBusSendReceiveAzureFuncs.SimpleServiceBusSenderReceiver.Run"
+}
