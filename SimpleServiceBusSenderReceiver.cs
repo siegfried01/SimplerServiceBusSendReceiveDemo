@@ -27,4 +27,3 @@ public class SimpleServiceBusSenderReceiver
         await messageActions.CompleteMessageAsync(message);
     }
 }
-
