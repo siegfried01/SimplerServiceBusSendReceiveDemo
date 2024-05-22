@@ -4,10 +4,6 @@
 # Azure Functions localsettings file
 local.settings.json
 
-infrastructure/publish-functionapp
-infrastructure/publish-functionapp.zip
-infrastructure/clear-resources.json
-
 # User-specific files
 *.suo
 *.user
