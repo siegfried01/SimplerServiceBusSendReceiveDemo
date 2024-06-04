@@ -4,26 +4,27 @@ using Azure.Messaging.ServiceBus;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
-namespace SimplerServiceBusSendReceiveDemo;
-
-public class SimpleServiceBusSenderReceiver
+namespace SimplerServiceBusSenderReceiver
 {
-    private readonly ILogger<SimpleServiceBusSenderReceiver> _logger;
-
-    public SimpleServiceBusSenderReceiver(ILogger<SimpleServiceBusSenderReceiver> logger)
+    public class SimpleServiceBusSenderReceiver
     {
-        _logger = logger;
-    }
+        private readonly ILogger<SimpleServiceBusSenderReceiver> _logger;
 
-    [Function(nameof(SimpleServiceBusSenderReceiver))]
-    public async Task Run(
-        [ServiceBusTrigger("mainqueue001", Connection = "serviceBusConnectionString")]
-        ServiceBusReceivedMessage message,
-        ServiceBusMessageActions messageActions)
-    {
-        _logger.LogInformation("Built at Tue May 21 05:03:13 2024 Message ID: {id} Body: {body} Content-type: {contentType}", message.MessageId, message.Body, message.ContentType);
+        public SimpleServiceBusSenderReceiver(ILogger<SimpleServiceBusSenderReceiver> logger)
+        {
+            _logger = logger;
+        }
 
-        // Complete the message
-        await messageActions.CompleteMessageAsync(message);
+        [Function(nameof(SimpleServiceBusSenderReceiver))]
+        public async Task Run(
+            [ServiceBusTrigger("mainqueue001", Connection = "serviceBusConnection")]
+            ServiceBusReceivedMessage message,
+            ServiceBusMessageActions messageActions)
+        {
+            _logger.LogInformation("Built at Tue May 21 05:03:13 2024 Message ID: {id} Body: {body} Content-type: {contentType}", message.MessageId, message.Body, message.ContentType);
+
+            // Complete the message
+            await messageActions.CompleteMessageAsync(message);
+        }
     }
 }

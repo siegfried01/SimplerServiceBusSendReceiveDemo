@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "SimplerServiceBusSendReceiveDemo": {
+    "SimplerServiceBusSenderReceiver": {
       "commandName": "Project",
-      "commandLineArgs": "--port 7257",
+      "commandLineArgs": "--port 7286",
       "launchBrowser": false
     }
   }
