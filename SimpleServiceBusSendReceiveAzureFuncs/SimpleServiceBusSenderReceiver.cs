@@ -17,7 +17,7 @@ namespace SimpleServiceBusSendReceiveAzureFuncs
         [Function("SimpleServiceBusReceiver")]
         public void Run([ServiceBusTrigger("mainqueue001", Connection = "ServiceBusConnection")] ServiceBusReceivedMessage message)
         {
-            _logger.LogInformation("Built at Thu May 02 09:14:55 2024 Message ID: {id} Body: {body} Content-type: {contentType}", message.MessageId, message.Body, message.ContentType);
+            _logger.LogInformation("Built at Wed Jun  5 12:54:20 2024 Message ID: {id} Body: {body} Content-type: {contentType}", message.MessageId, message.Body, message.ContentType);
         }
     }
 }
