@@ -83,17 +83,368 @@ EOF
    Compress-Archive -Path .\* -DestinationPath ../publish-functionapp.zip -Force
    popd
    End commands to deploy this file using Azure CLI with PowerShell
-
+   
    https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows
 
    This warning only occurs on my personal account for all three of the commands below.
-   WARNING: Runtime None not supported for os windows. Supported runtimes for os windows are: ['dotnet-isolated', 'dotnet-isolated', 'dotnet-isolated', 'dotnet-isolated', 'dotnet', 'node', 'node', 'node', 'node', 'java', 'java', 'java', 'powershell', 'powershell', 'custom']. Run 'az functionapp list-runtimes' for more details on supported runtimes. 
+   az functionapp config set --name iqa5jvm-func --resource-group rg_SBusSndRcv --windows-fx-version 'DOTNET-ISOLATED|8'
+   '8' is not recognized as an internal or external command,
+   operable program or batch file.
+   az functionapp config appsettings set -n iqa5jvm-func -g rg_SBusSndRcv --settings 'FUNCTIONS_WORKER_RUNTIME=dotnet-isolated'
+   WARNING: Invalid version:  for runtime dotnet-isolated and os windows. Supported versions for runtime dotnet-isolated and os windows are: ['8', '7', '6', '.4.8']. Run 'az functionapp list-runtimes' for more details on supported runtimes. 
    WARNING: App settings have been redacted. Use `az webapp/logicapp/functionapp config appsettings list` to view.
+   [
+     {
+       "name": "busNS",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "queue",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "FUNCTIONS_EXTENSION_VERSION",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "FUNCTIONS_WORKER_RUNTIME",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED",
+       "slotSetting": false,
+       "value": null
+     }
+   ]
+   az functionapp config appsettings set -g rg_SBusSndRcv -n iqa5jvm-func --settings 'WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1'
+   WARNING: Invalid version:  for runtime dotnet-isolated and os windows. Supported versions for runtime dotnet-isolated and os windows are: ['8', '7', '6', '.4.8']. Run 'az functionapp list-runtimes' for more details on supported runtimes. 
+   WARNING: App settings have been redacted. Use `az webapp/logicapp/functionapp config appsettings list` to view.
+   [
+     {
+       "name": "busNS",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "queue",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "FUNCTIONS_EXTENSION_VERSION",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "FUNCTIONS_WORKER_RUNTIME",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED",
+       "slotSetting": false,
+       "value": null
+     }
+   ]
+   az functionapp config set -g rg_SBusSndRcv -n iqa5jvm-func --net-framework-version 'v8.0'
+   WARNING: Invalid version:  for runtime dotnet-isolated and os windows. Supported versions for runtime dotnet-isolated and os windows are: ['8', '7', '6', '.4.8']. Run 'az functionapp list-runtimes' for more details on supported runtimes. 
+   {
+     "acrUseManagedIdentityCreds": false,
+     "acrUserManagedIdentityId": null,
+     "alwaysOn": false,
+     "apiDefinition": null,
+     "apiManagementConfig": null,
+     "appCommandLine": "",
+     "appSettings": null,
+     "autoHealEnabled": false,
+     "autoHealRules": null,
+     "autoSwapSlotName": null,
+     "azureStorageAccounts": {},
+     "connectionStrings": null,
+     "cors": null,
+     "defaultDocuments": [
+       "Default.htm",
+       "Default.html",
+       "Default.asp",
+       "index.htm",
+       "index.html",
+       "iisstart.htm",
+       "default.aspx",
+       "index.php"
+     ],
+     "detailedErrorLoggingEnabled": false,
+     "documentRoot": null,
+     "elasticWebAppScaleLimit": null,
+     "experiments": {
+       "rampUpRules": []
+     },
+     "ftpsState": "FtpsOnly",
+     "functionAppScaleLimit": 200,
+     "functionsRuntimeScaleMonitoringEnabled": false,
+     "handlerMappings": null,
+     "healthCheckPath": null,
+     "http20Enabled": false,
+     "httpLoggingEnabled": false,
+     "id": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_SBusSndRcv/providers/Microsoft.Web/sites/iqa5jvm-func",
+     "ipSecurityRestrictions": [
+       {
+         "action": "Allow",
+         "description": "Allow all access",
+         "headers": null,
+         "ipAddress": "Any",
+         "name": "Allow all",
+         "priority": 2147483647,
+         "subnetMask": null,
+         "subnetTrafficTag": null,
+         "tag": null,
+         "vnetSubnetResourceId": null,
+         "vnetTrafficTag": null
+       }
+     ],
+     "ipSecurityRestrictionsDefaultAction": null,
+     "javaContainer": null,
+     "javaContainerVersion": null,
+     "javaVersion": null,
+     "keyVaultReferenceIdentity": null,
+     "kind": null,
+     "limits": null,
+     "linuxFxVersion": "",
+     "loadBalancing": "LeastRequests",
+     "localMySqlEnabled": false,
+     "location": "West US 2",
+     "logsDirectorySizeLimit": 35,
+     "machineKey": null,
+     "managedPipelineMode": "Integrated",
+     "managedServiceIdentityId": 22859,
+     "metadata": null,
+     "minTlsCipherSuite": null,
+     "minTlsVersion": "1.2",
+     "minimumElasticInstanceCount": 1,
+     "name": "iqa5jvm-func",
+     "netFrameworkVersion": "v8.0",
+     "nodeVersion": "",
+     "numberOfWorkers": 1,
+     "phpVersion": "",
+     "powerShellVersion": "",
+     "preWarmedInstanceCount": 0,
+     "publicNetworkAccess": null,
+     "publishingUsername": "$iqa5jvm-func",
+     "push": null,
+     "pythonVersion": "",
+     "remoteDebuggingEnabled": false,
+     "remoteDebuggingVersion": "VS2019",
+     "requestTracingEnabled": false,
+     "requestTracingExpirationTime": null,
+     "resourceGroup": "rg_SBusSndRcv",
+     "scmIpSecurityRestrictions": [
+       {
+         "action": "Allow",
+         "description": "Allow all access",
+         "headers": null,
+         "ipAddress": "Any",
+         "name": "Allow all",
+         "priority": 2147483647,
+         "subnetMask": null,
+         "subnetTrafficTag": null,
+         "tag": null,
+         "vnetSubnetResourceId": null,
+         "vnetTrafficTag": null
+       }
+     ],
+     "scmIpSecurityRestrictionsDefaultAction": null,
+     "scmIpSecurityRestrictionsUseMain": false,
+     "scmMinTlsVersion": "1.2",
+     "scmType": "None",
+     "tracingOptions": null,
+     "type": "Microsoft.Web/sites",
+     "use32BitWorkerProcess": true,
+     "virtualApplications": [
+       {
+         "physicalPath": "site\\wwwroot",
+         "preloadEnabled": false,
+         "virtualDirectories": null,
+         "virtualPath": "/"
+       }
+     ],
+     "vnetName": "",
+     "vnetPrivatePortsCount": 0,
+     "vnetRouteAllEnabled": false,
+     "webSocketsEnabled": false,
+     "websiteTimeZone": null,
+     "windowsFxVersion": null,
+     "xManagedServiceIdentityId": null
+   }
+   az functionapp config set -g rg_SBusSndRcv -n iqa5jvm-func --use-32bit-worker-process false
+   WARNING: Invalid version:  for runtime dotnet-isolated and os windows. Supported versions for runtime dotnet-isolated and os windows are: ['8', '7', '6', '.4.8']. Run 'az functionapp list-runtimes' for more details on supported runtimes. 
+   {
+     "acrUseManagedIdentityCreds": false,
+     "acrUserManagedIdentityId": null,
+     "alwaysOn": false,
+     "apiDefinition": null,
+     "apiManagementConfig": null,
+     "appCommandLine": "",
+     "appSettings": null,
+     "autoHealEnabled": false,
+     "autoHealRules": null,
+     "autoSwapSlotName": null,
+     "azureStorageAccounts": {},
+     "connectionStrings": null,
+     "cors": null,
+     "defaultDocuments": [
+       "Default.htm",
+       "Default.html",
+       "Default.asp",
+       "index.htm",
+       "index.html",
+       "iisstart.htm",
+       "default.aspx",
+       "index.php"
+     ],
+     "detailedErrorLoggingEnabled": false,
+     "documentRoot": null,
+     "elasticWebAppScaleLimit": null,
+     "experiments": {
+       "rampUpRules": []
+     },
+     "ftpsState": "FtpsOnly",
+     "functionAppScaleLimit": 200,
+     "functionsRuntimeScaleMonitoringEnabled": false,
+     "handlerMappings": null,
+     "healthCheckPath": null,
+     "http20Enabled": false,
+     "httpLoggingEnabled": false,
+     "id": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_SBusSndRcv/providers/Microsoft.Web/sites/iqa5jvm-func",
+     "ipSecurityRestrictions": [
+       {
+         "action": "Allow",
+         "description": "Allow all access",
+         "headers": null,
+         "ipAddress": "Any",
+         "name": "Allow all",
+         "priority": 2147483647,
+         "subnetMask": null,
+         "subnetTrafficTag": null,
+         "tag": null,
+         "vnetSubnetResourceId": null,
+         "vnetTrafficTag": null
+       }
+     ],
+     "ipSecurityRestrictionsDefaultAction": null,
+     "javaContainer": null,
+     "javaContainerVersion": null,
+     "javaVersion": null,
+     "keyVaultReferenceIdentity": null,
+     "kind": null,
+     "limits": null,
+     "linuxFxVersion": "",
+     "loadBalancing": "LeastRequests",
+     "localMySqlEnabled": false,
+     "location": "West US 2",
+     "logsDirectorySizeLimit": 35,
+     "machineKey": null,
+     "managedPipelineMode": "Integrated",
+     "managedServiceIdentityId": 22859,
+     "metadata": null,
+     "minTlsCipherSuite": null,
+     "minTlsVersion": "1.2",
+     "minimumElasticInstanceCount": 1,
+     "name": "iqa5jvm-func",
+     "netFrameworkVersion": "v8.0",
+     "nodeVersion": "",
+     "numberOfWorkers": 1,
+     "phpVersion": "",
+     "powerShellVersion": "",
+     "preWarmedInstanceCount": 0,
+     "publicNetworkAccess": null,
+     "publishingUsername": "$iqa5jvm-func",
+     "push": null,
+     "pythonVersion": "",
+     "remoteDebuggingEnabled": false,
+     "remoteDebuggingVersion": "VS2019",
+     "requestTracingEnabled": false,
+     "requestTracingExpirationTime": null,
+     "resourceGroup": "rg_SBusSndRcv",
+     "scmIpSecurityRestrictions": [
+       {
+         "action": "Allow",
+         "description": "Allow all access",
+         "headers": null,
+         "ipAddress": "Any",
+         "name": "Allow all",
+         "priority": 2147483647,
+         "subnetMask": null,
+         "subnetTrafficTag": null,
+         "tag": null,
+         "vnetSubnetResourceId": null,
+         "vnetTrafficTag": null
+       }
+     ],
+     "scmIpSecurityRestrictionsDefaultAction": null,
+     "scmIpSecurityRestrictionsUseMain": false,
+     "scmMinTlsVersion": "1.2",
+     "scmType": "None",
+     "tracingOptions": null,
+     "type": "Microsoft.Web/sites",
+     "use32BitWorkerProcess": true,
+     "virtualApplications": [
+       {
+         "physicalPath": "site\\wwwroot",
+         "preloadEnabled": false,
+         "virtualDirectories": null,
+         "virtualPath": "/"
+       }
+     ],
+     "vnetName": "",
+     "vnetPrivatePortsCount": 0,
+     "vnetRouteAllEnabled": false,
+     "webSocketsEnabled": false,
+     "websiteTimeZone": null,
+     "windowsFxVersion": null,
+     "xManagedServiceIdentityId": null
+   }
+   az functionapp config appsettings set --name iqa5jvm-func --resource-group rg_SBusSndRcv --settings FUNCTIONS_EXTENSION_VERSION=~4
+   WARNING: Invalid version:  for runtime dotnet-isolated and os windows. Supported versions for runtime dotnet-isolated and os windows are: ['8', '7', '6', '.4.8']. Run 'az functionapp list-runtimes' for more details on supported runtimes. 
+   WARNING: App settings have been redacted. Use `az webapp/logicapp/functionapp config appsettings list` to view.
+   [
+     {
+       "name": "busNS",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "queue",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "FUNCTIONS_EXTENSION_VERSION",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "FUNCTIONS_WORKER_RUNTIME",
+       "slotSetting": false,
+       "value": null
+     },
+     {
+       "name": "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED",
+       "slotSetting": false,
+       "value": null
+     }
+   ]
 
    This code will eventually reside in the pipeline yaml
    emacs ESC 7 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    write-output "step 7 configure function app"
+   write-output "az functionapp config set --name $env:functionAppName --resource-group $env:rg --windows-fx-version 'DOTNET-ISOLATED|8'"
+   az functionapp config set --name $env:functionAppName --resource-group $env:rg --windows-fx-version 'DOTNET-ISOLATED|8'
+   write-output "az functionapp config appsettings set -n $env:functionAppName -g $env:rg --settings 'FUNCTIONS_WORKER_RUNTIME=dotnet-isolated'"
+   az functionapp config appsettings set -n $env:functionAppName -g $env:rg --settings "FUNCTIONS_WORKER_RUNTIME=dotnet-isolated"
    write-output "az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings 'WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1'"
    az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1
    write-output "az functionapp config set -g $env:rg -n $env:functionAppName --net-framework-version 'v8.0'"
