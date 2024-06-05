@@ -1,24 +1,35 @@
 /*
+
+   powershell -executionPolicy unrestricted -Command - <<EOF
+   `perl -lne 'sub range {$b=shift; $e=shift; $r=""; for(($b..$e)){ $r=$r."," if $r; $r=$r.$_;} $r } BEGIN {  $_ = shift; s/([0-9]+)-([0-9]+)/range($1,$2)/e; @idx=split ","; $c=0; $x=0; $f=0; $s=[] } $c++ if /^\s*Begin/; if (/^\s*End/) {$c--;$s[$f++]=""}; if ($x+$c>1) { $s->[$f]=$s->[$f].$_."\n"  } $x=$c; END { push(@idx, $#s); unshift @idx,0; for (@idx) { $p=$s->[$_]; chomp $p; print $p } }' "2,3,1,4-7" < "deploy-ServiceBusSimpleSendReceive.bicep"  `
+EOF
+
+ERROR: The command failed with an unexpected error. Here is the traceback:
+ERROR: Unable to find wstrust endpoint from MEX. This typically happens when attempting MSA accounts. More details available here. https://github.com/AzureAD/microsoft-authentication-library-for-python/wiki/Username-Password-Authentication
+
    Begin common prolog commands
-   $env:subscriptionId=(az account show --query id --output tsv | tr -d '\r')
-   $noManagedIdentity=($env:subscriptionId -eq "13c9725f-d20a-4c99-8ef4-d7bb78f98cff")
-   write-output "noManagedIdentity= $($noManagedIdentity)"
-   $env:name=$(If ($noManagedIdentity) { "siegfriedServiceBusSimpleSendReceive"} Else {"ServiceBusSimpleSendReceive"} )
+   #az login --user $env:AZ_USERNAME --password $env:AZ_PASSWORD
+   $env:subscriptionId=(az account show --query id --output tsv | ForEach-Object { $_ -replace "`r", ""})
+   $noManagedIdent=($env:subscriptionId -eq "13c9725f-d20a-4c99-8ef4-d7bb78f98cff")
+   #$noManagedIdent=[bool]0
+   $env:name="SBusSndRcv_$($env:USERNAME)"
    $env:rg="rg_$env:name"
    write-output "resource group=$env:rg"
-   $env:random=$(If ($noManagedIdentity) {"l2ydjsjlzxaoe"} Else { "aryxbqmevvg3e" })
-   $env:loc="westus2"
-   $env:funcLoc=$(If ($noManagedIdentity) {"eastus2"} Else { $env:loc })
-   $env:functionAppName="$($env:random)-func"
-   write-output "func=$env:functionAppName"
+   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"u2gzyv3"} Else { "iqa5jvm" })"
+   $env:loc="eastus2"
+   $env:funcLoc=$env:loc
+   $env:functionAppName="$($env:uniquePrefix)-func"
+   write-output "starting $(Get-Date) noManagedIdent=$($noManagedIdent)"
    End common prolog commands
    
    emacs F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   cd ..
-   write-output "az deployment group create --name $env:name --resource-group $env:rg   --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep"
-   az deployment group create --name $env:name --resource-group $env:rg  --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep --parameters "{'funcLoc': {'value': 'eastus2'}}" "{'noManagedIdentity': {'value': $noManagedIdentity}}" 
+   write-output "Step 1"
+   pushd ..
+   write-output "az deployment group create --name $env:name --resource-group $env:rg --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep"
+   az deployment group create --name $env:name --resource-group $env:rg  --template-file  infrastructure/deploy-ServiceBusSimpleSendReceive.bicep --parameters "{'funcLoc': {'value': 'eastus2'}}" "{'noManagedIdent': {'value': $noManagedIdent}}" "{'uniquePrefix': {'value': '$env:uniquePrefix'}}"
    write-output "end deploy"
+   popd
    End commands to deploy this file using Azure CLI with PowerShell
 
    New-AzResourceGroupDeployment -name "ServiceBusSimpleSendReceive" -Mode "Incremental"  -TemplateFile deploy-ServiceBusSimpleSendReceive.bicep
@@ -41,15 +52,24 @@
    End commands for one time initializations using Azure CLI with PowerShell
 
    emacs ESC 4 F10
-   Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 4 Publish"
-   write-output "dotnet publish ../SimplerServiceBusSenderReceiver.csproj   --configuration Release  -f net8.0  --self-contained --output ./publish-functionapp"
-   dotnet publish ../SimplerServiceBusSenderReceiver.csproj  --configuration Release  -f net8.0 --self-contained --output ./publish-functionapp
-   End commands to deploy this file using Azure CLI with PowerShell
+   Begin commands for one time initializations using Azure CLI with PowerShell
+   write-output "step 4 delete resource group"
+   write-output "az group delete -n $env:rg --yes"
+   az group delete -n $env:rg --yes
+   End commands for one time initializations using Azure CLI with PowerShell
 
+   This code will eventually reside in the pipeline yaml
    emacs ESC 5 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 5 zip"
+   write-output "step 5 Publish"
+   write-output "dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0  --self-contained --output ./publish-functionapp"
+   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0 --self-contained --output ./publish-functionapp
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   This code will eventually reside in the pipeline yaml
+   emacs ESC 6 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 6 zip"
    pushd ./publish-functionapp
    write-output "zip -r  ../publish-functionapp.zip ."
    zip -r  ../publish-functionapp.zip .
@@ -58,9 +78,10 @@
 
    https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows
 
-   emacs ESC 6 F10
+   This code will eventually reside in the pipeline yaml
+   emacs ESC 7 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 6 configure function app"
+   write-output "step 7 configure function app"
    write-output "az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings 'WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1'"
    az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1
    write-output "az functionapp config set -g $env:rg -n $env:functionAppName --net-framework-version 'v8.0'"
@@ -71,24 +92,34 @@
    az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings FUNCTIONS_EXTENSION_VERSION=~4
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 7 F10
+
+   This code will eventually be replace by EV2 resident JSON ARM template that does zipdeploy
+   emacs ESC 8 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 7 deploy compiled #C code deployment to azure resource"
+   write-output "step 8 deploy compiled C# code deployment to azure resource"
    write-output "az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip"
    az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 8 F10
+   emacs ESC 9 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 8 get the logs"
-   write-output "curl -X GET 'https://$($env:random)-func.scm.azurewebsites.net/api/dump'"
-   curl  "https://$($env:random)-func.scm.azurewebsites.net/api/dump"
+   write-output "step 9 webapp tail logs"
+   write-output "az webapp log tail -g $env:rg -n $env:functionAppName"
+   az webapp log tail -g $env:rg -n $env:functionAppName
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 10 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 10 get the logs This is not working and I don't now why"
+   write-output "curl -X GET 'https://$($env:uniquePrefix)-func.scm.azurewebsites.net/api/dump'"
+   curl  "https://$($env:uniquePrefix)-func.scm.azurewebsites.net/api/dump"
    dir
    End commands to deploy this file using Azure CLI with PowerShell
 
    Begin common epilog commands
-   az resource list -g $env:rg --query "[?resourceGroup=='$env:rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table  | ForEach-Object { $_ -replace "`r", ""}
-   write-output "all done"
+   #Get-AzResource -ResourceGroupName $env:rg | ft
+   az resource list -g $env:rg --query "[?resourceGroup=='$env:rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table  | tr '\r' -d
+   write-output "all done $(Get-Date)"
    End common epilog commands
 
 
@@ -97,9 +128,11 @@
 param queueName string = 'mainqueue001'
 param loc string = resourceGroup().location
 param funcLoc string = loc
-param noManagedIdentity bool = false
-param name string = uniqueString(resourceGroup().id)
-param sbdemo001NS_name string = '${name}-servicebus'
+param noManagedIdent bool = false
+param uniquePrefix string = uniqueString(resourceGroup().id)
+param sbdemo001NS_name string = '${uniquePrefix}-servicebus'
+
+
 
 
 resource sbnsSimpleSendReceiveDemo 'Microsoft.ServiceBus/namespaces@2022-01-01-preview' = {
@@ -173,12 +206,12 @@ output outputServiceBusConnectionViaMSI string = serviceBusConnectionViaMSI
 output serviceBusConnectionString string = serviceBusConnection
 output busNS string = sbdemo001NS_name
 output queue string = sbQueue.name
-output noManagedIdentityoutput bool = noManagedIdentity
+output noManagedIdentoutput bool = noManagedIdent
 
 
-param ServiceBusSenderReceiverPlans string = '${name}-func'
+param ServiceBusSenderReceiverPlans string = '${uniquePrefix}-func'
 resource functionPlan 'Microsoft.Web/serverfarms@2023-01-01' = {
-  name: '${name}-func-plan'
+  name: '${uniquePrefix}-func-plan'
   location: funcLoc
   sku: {
     name: 'Y1'
@@ -250,7 +283,7 @@ resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
       connectionStrings: [
         {
           type: 'Custom'
-          connectionString: noManagedIdentity? serviceBusConnection : serviceBusConnectionViaMSI
+          connectionString: noManagedIdent? serviceBusConnection : serviceBusConnectionViaMSI
           name: 'ServiceBusConnection'
         }
       ]
@@ -268,15 +301,7 @@ resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
     storageAccountRequired: false
     keyVaultReferenceIdentity: 'SystemAssigned'
   }
-  // error "This server farm 'jqo0osm3qxqr-func-plan' must contain only Function Apps."
-  resource sourcecontrol 'sourcecontrols@2020-12-01' = {
-    name: 'web'
-    properties: {
-      repoUrl: 'https://github.com/siegfried01/SimplerServiceBusSendReceiveDemo.git'
-      branch: 'master'
-      isManualIntegration: false      
-    }
-  }  
+  
 }
 
 resource ServiceBusSenderReceiverFunctionsFtp 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-01-01' = {
@@ -410,7 +435,7 @@ resource sites_SimpleServiceBusReceiverAzureFuncs_name_sites_SimpleServiceBusRec
 }
 
 
-module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noManagedIdentity) {
+module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noManagedIdent) {
   name: 'assign-role-to-functionApp'
   params: {
 	roleScope: resourceGroup().id
