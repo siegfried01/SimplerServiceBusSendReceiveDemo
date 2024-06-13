@@ -2,31 +2,32 @@
    From a (cygwin) bash prompt, use this perl one-liner to extract the powershell script fragments and exeucte them. This example shows how to execute steps 2 (shutdown) and steps 4-13 and skipping steps 7,8,9 because they don't work (yet). Adjust that list of steps according to your needs.
 
    powershell -executionPolicy unrestricted -Command - <<EOF
-   `perl -lne 'sub range {$b=shift; $e=shift; $r=""; for(($b..$e)){ $r=$r."," if $r; $r=$r.$_;} $r } BEGIN {  $_ = shift; s/([0-9]+)-([0-9]+)/range($1,$2)/e; @idx=split ","; $c=0; $x=0; $f=0; $s=[] } $c++ if /^\s*Begin/; if (/^\s*End/) {$c--;$s[$f++]=""}; if ($x+$c>1) { $s->[$f]=$s->[$f].$_."\n"  } $x=$c; END { push(@idx, $#s); unshift @idx,0; for (@idx) { $p=$s->[$_]; chomp $p; print $p } }' "2,4-6,10-13" < "azCliDotNetIsolatedWindowsFuncAppServiceBussStgAcnt.bicep"  `
+   `perl -lne 'sub range {$b=shift; $e=shift; $r=""; for(($b..$e)){ $r=$r."," if $r; $r=$r.$_;} $r } BEGIN {  $_ = shift; s/([0-9]+)-([0-9]+)/range($1,$2)/e; @idx=split ","; $c=0; $x=0; $f=0; $s=[] } $c++ if /^\s*Begin/; if (/^\s*End/) {$c--;$s[$f++]=""}; if ($x+$c>1) { $s->[$f]=$s->[$f].$_."\n"  } $x=$c; END { push(@idx, $#s); unshift @idx,0; for (@idx) { $p=$s->[$_]; chomp $p; print $p } }' "2,4-6,10-13" < "deploy-ServiceBusSimpleSendReceive.bicep"  `
 EOF
 
    Begin common prolog commands
    $env:subscriptionId=(az account show --query id --output tsv | ForEach-Object { $_ -replace "`r", ""})
    $env:name='azCliDotNetIsolatedWindowsFuncAppServiceBussStgAcnt'
-   $env:name="SBusSndRcv_$($env:USERNAME)"
    $env:name='SBusSndRcv'
+   $env:name="SBusSndRcv_$($env:USERNAME)"
    $env:rg="rg_$($env:name)"
    $env:loc=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
    $env:sp="spad_$env:name"
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "hein") {"iqa5jvm"} Else { "jyzwg" } )"
-   $env:queueName = 'mainqueue001'
-   $noManagedIdent=[bool]0
+   $env:serviceBusQueueName = 'mainqueue001'
+   $noManagedIdent=[bool]1
    $env:storageAccountName="$($env:uniquePrefix)stg"
    $env:functionAppName="$($env:uniquePrefix)-func"
    $env:funcPlanName="$($env:uniquePrefix)-plan-func"
    $env:serviceBusNS="$($env:uniquePrefix)-servicebus"
+   $env:logAnalyticsWS="/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/defaultresourcegroup-wus2/providers/microsoft.operationalinsights/workspaces/defaultworkspace-13c9725f-d20a-4c99-8ef4-d7bb78f98cff-wus2"
    $StartTime = $(get-date)
    End common prolog commands
 
    emacs F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
-     --template-file  "azCliDotNetIsolatedWindowsFuncAppServiceBussStgAcnt.bicep"            `
+     --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters "{'uniquePrefix': {'value': '$env:uniquePrefix'}}"                         `
      "{'location': {'value': '$env:loc'}}"                                                   `
      "{'noManagedIdent': {'value': $noManagedIdent}}"                                        `
@@ -34,7 +35,9 @@ EOF
      "{'functionAppName': {'value': '$env:functionAppName'}}"                                `
      "{'functionPlanName': {'value': '$env:funcPlanName'}}"                                  `
      "{'serviceBusNS': {'value': '$env:serviceBusNS'}}"                                      `
-     "{'queueName': {'value': '$env:queueName'}}"                                            `
+     "{'serviceBusNS': {'value': '$env:serviceBusNS'}}"                                      `
+     "{'serviceBusQueueName': {'value': '$env:serviceBusQueueName'}}"                        `
+     "{'logAnalyticsWS': {'value': '$env:logAnalyticsWS'}}"                                  `
    | ForEach-Object { $_ -replace "`r", ""}
    write-output "end deploy $(Get-Date)"
    End commands to deploy this file using Azure CLI with PowerShell
@@ -68,6 +71,7 @@ EOF
    az group create -l $env:loc -n $env:rg
    $env:id=(az group show --name $env:rg --query 'id' --output tsv)
    write-output "id=$env:id"
+   write-output "Skip creating the service principal for github workflow"
    #write-output "az ad sp create-for-rbac --name $env:sp --json-auth --role contributor --scopes $env:id"
    #az ad sp create-for-rbac --name $env:sp --json-auth --role contributor --scopes $env:id
    #write-output "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
@@ -76,8 +80,115 @@ EOF
 
    emacs ESC 5 F10
    Begin commands for one time initializations using Azure CLI with PowerShell
-   write-output "current resources"
+   write-output "current resource list"
    End commands for one time initializations using Azure CLI with PowerShell
+
+   emacs ESC 6 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 6 Create Storage Account for Function App"
+   write-output "az storage account create --name $env:storageAccountName  --resource-group $env:rg --location $env:loc --sku Standard_LRS --access-tier Cool"
+   az storage account create --name $env:storageAccountName  --resource-group $env:rg --location $env:loc --sku Standard_LRS --access-tier Cool
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 7 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 7 Show Connection strings for storage Storage Account for Function App"
+   write-output "az storage account show-connection-string --resource-group $env:rg --name $env:storageAccountName --output TSV"
+   az storage account show-connection-string --resource-group $env:rg --name $env:storageAccountName --output TSV
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 8 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 8 Create Windows Function App"
+   write-output "az functionapp create --resource-group $env:rg --consumption-plan-location $env:loc --runtime dotnet-isolated --runtime-version 8 --functions-version 4 --name $env:functionAppName --storage-account $env:storageAccountName"
+   az functionapp create --resource-group $env:rg --consumption-plan-location $env:loc --runtime dotnet-isolated --runtime-version 8 --functions-version 4 --name $env:functionAppName --storage-account $env:storageAccountName
+   az functionapp config appsettings list -n $env:functionAppName -g $env:rg
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 9 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 9 create service bus "
+   write-output "az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Basic"
+   az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Basic
+   write-output "az servicebus queue create --resource-group $env:rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueueName"
+   az servicebus queue create --resource-group $env:rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueueName
+   End commands to deploy this file using Azure CLI with PowerShell
+   
+   emacs ESC 10 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "Step 10 Set the Environment Variables"
+   write-output "az servicebus namespace authorization-rule keys list --resource-group $env:rg --namespace-name $env:serviceBusNS --name RootManageSharedAccessKey --query primaryConnectionString --output tsv"
+   $env:ServiceBusConnection=(az servicebus namespace authorization-rule keys list --resource-group $env:rg --namespace-name $env:serviceBusNS --name RootManageSharedAccessKey --query primaryConnectionString --output tsv)
+   write-output "(list (setenv `"ServiceBusConnection`" `"$($env:ServiceBusConnectionString)`")"
+   write-output "(setenv `"busNS`" `"$($env:serviceBusNS)`")"
+   write-output "(setenv `"queue`" `"$($env:serviceBusQueueName)`")"
+   write-output "(setenv `"RG_WEBSITE_00`" `"$($env:rg)`")"
+   write-output "(setenv `"SS_WEBSITE_00`" `"$($env:functionAppName)`"))"
+   write-output "az webapp log tail -n `"$($env:functionAppName)`" -g `"$($env:rg)`""
+   write-output "az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom"
+   az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 11 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 11 show service bus add connection string"
+   write-output "az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings busNS=$($env:serviceBusNS)"
+   az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings busNS=$env:serviceBusNS
+   write-output "az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings queue=$env:serviceBusQueueName"
+   az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings queue=$env:serviceBusQueueName
+   write-output "az webapp config connection-string list --name $env:functionAppName --resource-group $env:rg"
+   az webapp config connection-string list --name $env:functionAppName --resource-group $env:rg
+   write-output "az functionapp config appsettings list -n $env:functionAppName -g $env:rg"
+   az functionapp config appsettings list -n $env:functionAppName -g $env:rg
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 12 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 12 Publish"
+   $path = "publish-functionapp"
+   if (Test-Path -LiteralPath $path) {
+       write-output "Remove-Item -LiteralPath $path  -Recurse"
+       Remove-Item -LiteralPath $path -Verbose -Recurse
+   } else {
+      write-output "Path doesn't exist: $path create it"
+      New-Item -Path "." -Name $Path -ItemType Directory
+   }
+   write-output "dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0  --self-contained --output ./publish-functionapp"
+   dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0 --self-contained --output ./publish-functionapp
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   This code will eventually reside in the pipeline yaml
+   emacs ESC 13 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 13 zip"
+   $path = "publish-functionapp.zip"
+   if (Test-Path -LiteralPath $path) {
+       write-output "Remove-Item -LiteralPath $path "
+       Remove-Item -LiteralPath $path
+   } else {
+      write-output "$path doesn't exist: create it"
+   }
+   pushd ./publish-functionapp
+   write-output "Compress-Archive -Path .\* -DestinationPath ../publish-functionapp.zip -Force"
+   Compress-Archive -Path .\* -DestinationPath ../publish-functionapp.zip -Force
+   popd
+   End commands to deploy this file using Azure CLI with PowerShell
+   
+   Certificate verification failed. This typically happens when using Azure CLI behind a proxy that intercepts traffic with a self-signed certificate. Please add this certificate to the trusted CA bundle. More info: https://docs.microsoft.com/cli/azure/use-cli-effectively#work-behind-a-proxy.
+   This code will eventually be replace by EV2 resident JSON ARM template that does zipdeploy
+   emacs ESC 14 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 14 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."
+   write-output "az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip"
+   az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 15 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 15 Delete Function App"
+   write-output "az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan"
+   az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan
+   End commands to deploy this file using Azure CLI with PowerShell
 
    Begin common epilog commands
    az resource list -g $env:rg --query "[?resourceGroup=='$env:rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table  | ForEach-Object { $_ -replace "`r", ""}
@@ -89,7 +200,7 @@ EOF
  */
 param location string = resourceGroup().location
 param uniquePrefix string = uniqueString(resourceGroup().id)
-param queueName string = 'mainqueue001' 
+param serviceBusQueueName string = 'mainqueue001' 
 
 param serviceBusNS string = '${uniquePrefix}-servicebus'
 param functionAppName string = '${uniquePrefix}-func'
@@ -98,8 +209,9 @@ param appInsightsName string = '${uniquePrefix}-appins'
 param storageAccountName string = '${uniquePrefix}stg'
 
 param noManagedIdent bool = false
+param actionGroups_Application_Insights_Smart_Detection_name string = '${uniquePrefix}-detector'
 param actiongroups_application_insights_smart_detection_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_generalpurposecosmos/providers/microsoft.insights/actiongroups/application insights smart detection'
-param workspaces_DefaultWorkspace_acc26051_92a5_4ed1_a226_64a187bc27db_WUS2_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2'
+param logAnalyticsWS string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2'
 
 resource appInsights 'microsoft.insights/components@2020-02-02' = {
   name: appInsightsName
@@ -108,7 +220,7 @@ resource appInsights 'microsoft.insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     RetentionInDays: 90
-    WorkspaceResourceId: workspaces_DefaultWorkspace_acc26051_92a5_4ed1_a226_64a187bc27db_WUS2_externalid
+    WorkspaceResourceId: logAnalyticsWS
     IngestionMode: 'LogAnalytics'
     publicNetworkAccessForIngestion: 'Enabled'
     publicNetworkAccessForQuery: 'Enabled'
@@ -158,7 +270,7 @@ resource serviceBusNS_default 'Microsoft.ServiceBus/namespaces/networkrulesets@2
 
 resource serviceBusQueue 'Microsoft.ServiceBus/namespaces/queues@2022-10-01-preview' = {
   parent: serviceBus
-  name: queueName
+  name: serviceBusQueueName
   properties: {
     maxMessageSizeInKilobytes: 256
     lockDuration: 'PT1M'
@@ -289,8 +401,8 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
   }
 }
 
-var storageAccountConnectionString1 = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountForFuncApp.name};AccountKey=${storageAccountForFuncApp.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-output outStorageAccountConnectionString1 string = storageAccountConnectionString1
+var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountForFuncApp.name};AccountKey=${storageAccountForFuncApp.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+output outStorageAccountConnectionString1 string = storageAccountConnectionString
 
 resource  functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name:  functionPlanName
@@ -317,6 +429,38 @@ resource  functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   }
 }
 
+resource actionGroups_Application_Insights_Smart_Detection_name_resource 'microsoft.insights/actionGroups@2023-01-01' = {
+  name: actionGroups_Application_Insights_Smart_Detection_name
+  location: 'Global'
+  properties: {
+    groupShortName: 'SmartDetect'
+    enabled: true
+    emailReceivers: []
+    smsReceivers: []
+    webhookReceivers: []
+    eventHubReceivers: []
+    itsmReceivers: []
+    azureAppPushReceivers: []
+    automationRunbookReceivers: []
+    voiceReceivers: []
+    logicAppReceivers: []
+    azureFunctionReceivers: []
+    armRoleReceivers: [
+      {
+        name: 'Monitoring Contributor'
+        roleId: '749f88d5-cbae-40b8-bcfc-e573ddc772fa'
+        useCommonAlertSchema: true
+      }
+      {
+        name: 'Monitoring Reader'
+        roleId: '43d0d8ad-25c7-4714-9337-8ba259a9fe05'
+        useCommonAlertSchema: true
+      }
+    ]
+  }
+}
+
+
 resource smartDetectorAlertRulesFailureAnomalies 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = {
   name: '${uniquePrefix}-failure anomalies'
   location: 'global'
@@ -333,7 +477,8 @@ resource smartDetectorAlertRulesFailureAnomalies 'microsoft.alertsmanagement/sma
     ]
     actionGroups: {
       groupIds: [
-        actiongroups_application_insights_smart_detection_externalid
+        actionGroups_Application_Insights_Smart_Detection_name_resource.id
+        //actiongroups_application_insights_smart_detection_externalid
       ]
     }
   }
@@ -685,11 +830,11 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'AzureWebJobsStorage'
-          value: storageAccountConnectionString1 
+          value: storageAccountConnectionString 
         }
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: storageAccountConnectionString1
+          value: storageAccountConnectionString
         }
         {
           name: 'busNS'
@@ -697,7 +842,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'queue'
-          value: queueName
+          value: serviceBusQueueName
         }
       ]
       connectionStrings: [
