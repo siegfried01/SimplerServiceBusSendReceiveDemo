@@ -6,6 +6,8 @@ infrastructure/publish-functionapp.zip
 infrastructure/clear-resources.json
 Properties/*
 Properties/serviceDependencies.json
+publish-functionapp.zip
+log-sequence-number.txt
 
 
 # Azure Functions localsettings file
