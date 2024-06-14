@@ -879,6 +879,16 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     storageAccountRequired: false
     keyVaultReferenceIdentity: 'SystemAssigned'
   }
+  
+  resource sourcecontrol 'sourcecontrols@2020-12-01' = {
+    name: 'web'
+    properties: {
+      repoUrl: 'https://github.com/siegfried01/SimplerServiceBusSendReceiveDemo.git'
+      branch: 'master'
+      isManualIntegration: false      
+    }
+  }  
+  
   resource azurewebsites_net 'hostNameBindings@2023-12-01' = {
     name: '${functionAppName}.azurewebsites.net'
   
