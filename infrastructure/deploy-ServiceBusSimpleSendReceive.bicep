@@ -884,7 +884,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     name: 'web'
     properties: {
       repoUrl: 'https://github.com/siegfried01/SimplerServiceBusSendReceiveDemo.git'
-      branch: 'master'
+      branch: 'azure-source-control-2024-jun-14-13'
       isManualIntegration: false      
     }
   }  
