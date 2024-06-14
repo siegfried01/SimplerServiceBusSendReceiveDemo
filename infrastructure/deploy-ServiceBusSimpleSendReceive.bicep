@@ -8,19 +8,18 @@ EOF
    Begin common prolog commands
    $env:subscriptionId=(az account show --query id --output tsv | ForEach-Object { $_ -replace "`r", ""})
    $env:name='azCliDotNetIsolatedWindowsFuncAppServiceBussStgAcnt'
-   $env:name='SBusSndRcv'
-   $env:name="SBusSndRcv_$($env:USERNAME)"
+   If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv_$($env:USERNAME)" }
    $env:rg="rg_$($env:name)"
    $env:loc=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
    $env:sp="spad_$env:name"
-   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "hein") {"iqa5jvm"} Else { "jyzwg" } )"
+   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
    $env:serviceBusQueueName = 'mainqueue001'
    $noManagedIdent=[bool]0
    $env:storageAccountName="$($env:uniquePrefix)stg"
    $env:functionAppName="$($env:uniquePrefix)-func"
    $env:funcPlanName="$($env:uniquePrefix)-plan-func"
    $env:serviceBusNS="$($env:uniquePrefix)-servicebus"
-   $env:logAnalyticsWS="/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/defaultresourcegroup-wus2/providers/microsoft.operationalinsights/workspaces/defaultworkspace-13c9725f-d20a-4c99-8ef4-d7bb78f98cff-wus2"
+   $env:logAnalyticsWS= If ($env:USERNAME -eq "shein") { "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2" } else {   "/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/defaultresourcegroup-wus2/providers/microsoft.operationalinsights/workspaces/defaultworkspace-13c9725f-d20a-4c99-8ef4-d7bb78f98cff-wus2" }
    $StartTime = $(get-date)
    End common prolog commands
 
@@ -222,7 +221,7 @@ resource appInsights 'microsoft.insights/components@2020-02-02' = {
     RetentionInDays: 90
     WorkspaceResourceId: logAnalyticsWS
     IngestionMode: 'LogAnalytics'
-    publicNetworkAccessForIngestion: 'Enabled'
+    publicNetworkAccessForIngestion: 'Enabled'
     publicNetworkAccessForQuery: 'Enabled'
   }
 }
@@ -768,6 +767,7 @@ var serviceBusConnection = listKeys(serviceBusKeyId, serviceBus.apiVersion).prim
 
 // See https://learn.microsoft.com/en-us/azure/azure-functions/functions-identity-based-connections-tutorial-2#connect-to-service-bus-in-your-function-app
 var ServiceBusConnection__fullyQualifiedNamespace = '${serviceBus.name}.servicebus.windows.net'
+output ServiceBusConnectionManagedIdentity string = ServiceBusConnection__fullyQualifiedNamespace
 
 var serviceBusEndPoint = split(serviceBusConnection,';')[0]
 var serviceBusConnectionViaMSI= '${serviceBusEndPoint};Authentication=ManagedIdentity'
@@ -853,21 +853,17 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
           value: serviceBusQueueName
         }
         {
-          name: 'busNS'
-          value: serviceBusNS
-        }
-        {
           name: 'ServiceBusConnection__fullyQualifiedNamespace'
           value: ServiceBusConnection__fullyQualifiedNamespace
         }
       ]
-      connectionStrings: [
-        {
-          type: 'Custom'
-          connectionString: noManagedIdent? serviceBusConnection : serviceBusConnectionViaMSI
-          name: 'ServiceBusConnection'
-        }
-      ]
+      // connectionStrings: [
+      //   {
+      //     type: 'Custom'
+      //     connectionString: noManagedIdent? serviceBusConnection : serviceBusConnectionViaMSI
+      //     name: 'ServiceBusConnection'
+      //   }
+      // ]
     }
     scmSiteAlsoStopped: false
     clientAffinityEnabled: false
