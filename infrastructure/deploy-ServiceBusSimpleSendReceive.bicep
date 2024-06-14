@@ -15,7 +15,7 @@ EOF
    $env:sp="spad_$env:name"
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "hein") {"iqa5jvm"} Else { "jyzwg" } )"
    $env:serviceBusQueueName = 'mainqueue001'
-   $noManagedIdent=[bool]1
+   $noManagedIdent=[bool]0
    $env:storageAccountName="$($env:uniquePrefix)stg"
    $env:functionAppName="$($env:uniquePrefix)-func"
    $env:funcPlanName="$($env:uniquePrefix)-plan-func"
@@ -757,10 +757,18 @@ resource appInsights_SlowServerResponseTime 'microsoft.insights/components/Proac
   }
 }
 
+
 output serviceBusEndpoint1 string = serviceBus.properties.serviceBusEndpoint
 var serviceBusKeyId = '${serviceBus.id}/AuthorizationRules/RootManageSharedAccessKey'
 var serviceBusConnection = listKeys(serviceBusKeyId, serviceBus.apiVersion).primaryConnectionString
 // Extract the service bus endpoint from the connection string
+
+// This serviceBusConnectionViaMSI working on May 14 2024. Now I am getting this error after having upgraded the bicep code from in-process .NET 6 function app to isolated Function App .NET 8. 
+// WARNING: 2024-06-12T23:03:23.634 [Error] The listener for function 'Functions.SimpleServiceBusReceiver' was unable to start.Microsoft.Azure.WebJobs.Host.Listeners.FunctionListenerException : The listener for function "'Functions.SimpleServiceBusReceiver' was unable to start. ---> System.ArgumentException : The connection string used for an Service Bus client must specify the Service Bus namespace host and either a Shared Access Key (both the name and value) OR a Shared Access Signature to be valid. (Parameter 'connectionString')
+
+// See https://learn.microsoft.com/en-us/azure/azure-functions/functions-identity-based-connections-tutorial-2#connect-to-service-bus-in-your-function-app
+var ServiceBusConnection__fullyQualifiedNamespace = '${serviceBus.name}.servicebus.windows.net'
+
 var serviceBusEndPoint = split(serviceBusConnection,';')[0]
 var serviceBusConnectionViaMSI= '${serviceBusEndPoint};Authentication=ManagedIdentity'
 output outputServiceBusEndpoint string = serviceBusEndPoint
@@ -843,6 +851,14 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'queue'
           value: serviceBusQueueName
+        }
+        {
+          name: 'busNS'
+          value: serviceBusNS
+        }
+        {
+          name: 'ServiceBusConnection__fullyQualifiedNamespace'
+          value: ServiceBusConnection__fullyQualifiedNamespace
         }
       ]
       connectionStrings: [
