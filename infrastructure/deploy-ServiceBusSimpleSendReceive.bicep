@@ -7,7 +7,6 @@ EOF
 
    Begin common prolog commands
    $env:subscriptionId=(az account show --query id --output tsv | ForEach-Object { $_ -replace "`r", ""})
-   $env:name='azCliDotNetIsolatedWindowsFuncAppServiceBussStgAcnt'
    If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv_$($env:USERNAME)" }
    $env:rg="rg_$($env:name)"
    $env:loc=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
@@ -15,7 +14,7 @@ EOF
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
    $env:serviceBusQueueName = 'mainqueue001'
    $noManagedIdent=[bool]0
-   $env:storageAccountName="$($env:uniquePrefix)stg"
+   $env:storageAccountName="$($env:uniquePrefix)funcstg"
    $env:functionAppName="$($env:uniquePrefix)-func"
    $env:funcPlanName="$($env:uniquePrefix)-plan-func"
    $env:serviceBusNS="$($env:uniquePrefix)-servicebus"
@@ -43,7 +42,7 @@ EOF
 
    emacs ESC 2 F10
    Begin commands to shut down this deployment using Azure CLI with PowerShell
-   write-output "Step 2: begin shutdown $env:rg $(Get-Date)"
+   write-output "Step 2: begin shutdown delete (contents only) resource group $env:rg $(Get-Date)"
    write-output "az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg  | ForEach-Object { $_ -replace '`r', ''}"
    az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg  | ForEach-Object { $_ -replace "`r", ""}
    write-output "showdown is complete $env:rg $(Get-Date)" 
@@ -51,7 +50,7 @@ EOF
 
    emacs ESC 3 F10
    Begin commands to shut down this deployment using Azure CLI with PowerShell
-   write-output "Step 3: begin shutdown delete resource group $env:rg $(Get-Date)"
+   write-output "Step 3: begin shutdown delete resource group $env:rg and associated service principal $(Get-Date)"
    write-output "az ad sp list --display-name $env:sp"
    az ad sp list --display-name $env:sp
    write-output "az ad sp list --filter "displayname eq '$env:sp'" --output json"
@@ -143,13 +142,62 @@ EOF
 
    emacs ESC 12 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 12 Publish"
+   write-output "Step 12: Upddate the built at timestamp in the source code (ala ChatGPT)"
+   # Path to your C# source file
+   $filePath = "..\SimpleServiceBusSendReceiveAzureFuncs/SimpleServiceBusSenderReceiver.cs"
+   # Read the contents of the file
+   $content = Get-Content -Path $filePath -Raw
+   # Regular expression to match the version number in the format "Version 000000000"
+   $versionRegex = 'Version [0-9]+'
+   # Regular expression to match the date-time string
+   $regex = 'Built at [A-Za-z]{3} +[A-Za-z]{3} +[0-9]{1,2} +[0-9]{1,2}:+[0-9]{1,2}:+[0-9]{1,2} +[0-9]{4}'
+   # Initialize flags to check if replacements were made
+   $dateUpdated = $false
+   $versionUpdated = $false
+   if ($content -match $regex) {
+     # Get the current date-time in the same format
+     $currentDateTime = Get-Date -Format "ddd MMM dd HH:mm:ss yyyy"
+     write-output "Replace the old date-time with the current date-time $currentDateTime"
+     $updatedContent = [regex]::Replace($content, $regex, "Built at $currentDateTime")
+     $dateUpdated = $true
+     Write-Output "Date-time string updated successfully."
+   } else {
+     write-output "Built At timestamp not found"
+   }
+   # Check if the version regex finds a match
+   if ($content -match $versionRegex) {
+       # Extract the current version number
+       $currentVersion = [regex]::Match($content, $versionRegex).Value
+       # Increment the version number by 1
+       $versionNumber = [int]($currentVersion -replace '[^0-9]', '')
+       write-output "found version $versionNumber"
+       $newVersionNumber = $versionNumber + 1
+       write-output "increment version $versionNumber"
+       $newVersionString = "Version " + $newVersionNumber.ToString("D5")
+       write-output "new version string= $newVersionString"
+       # Replace the old version number with the new version number
+       $content = $content -replace $versionRegex, $newVersionString
+       $versionUpdated = $true
+   } else {
+       Write-Output "No version number found matching the pattern."
+   }
+   if ($dateUpdated -or $versionUpdated) {
+       Set-Content -Path $filePath -Value $content
+       Write-Output "File updated successfully in $filePath."
+   } else {
+      Write-Output "No updates made to the file."
+   }   
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 13 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 13 Publish"
    $path = "publish-functionapp"
    if (Test-Path -LiteralPath $path) {
-       write-output "Remove-Item -LiteralPath $path  -Recurse"
-       Remove-Item -LiteralPath $path -Verbose -Recurse
+       write-output "Deleting $path"
+       Remove-Item -LiteralPath $path -Recurse
    } else {
-      write-output "Path doesn't exist: $path create it"
+      write-output "Path doesn't exist: create $path "
       New-Item -Path "." -Name $Path -ItemType Directory
    }
    write-output "dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0  --self-contained --output ./publish-functionapp"
@@ -157,12 +205,12 @@ EOF
    End commands to deploy this file using Azure CLI with PowerShell
 
    This code will eventually reside in the pipeline yaml
-   emacs ESC 13 F10
+   emacs ESC 14 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 13 zip"
+   write-output "step 14 zip"
    $path = "publish-functionapp.zip"
    if (Test-Path -LiteralPath $path) {
-       write-output "Remove-Item -LiteralPath $path "
+       write-output "Delete $path "
        Remove-Item -LiteralPath $path
    } else {
       write-output "$path doesn't exist: create it"
@@ -175,16 +223,16 @@ EOF
    
    Certificate verification failed. This typically happens when using Azure CLI behind a proxy that intercepts traffic with a self-signed certificate. Please add this certificate to the trusted CA bundle. More info: https://docs.microsoft.com/cli/azure/use-cli-effectively#work-behind-a-proxy.
    This code will eventually be replace by EV2 resident JSON ARM template that does zipdeploy
-   emacs ESC 14 F10
+   emacs ESC 15 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 14 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."
+   write-output "step 15 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."
    write-output "az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip"
    az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 15 F10
+   emacs ESC 16 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 15 Delete Function App"
+   write-output "step 16 Delete Function App"
    write-output "az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan"
    az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan
    End commands to deploy this file using Azure CLI with PowerShell
@@ -402,6 +450,9 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
 
 var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountForFuncApp.name};AccountKey=${storageAccountForFuncApp.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 output outStorageAccountConnectionString1 string = storageAccountConnectionString
+
+var storageAccountConnectionStringMSI='AzureWebJobsStorage__${storageAccountName}'
+var outputStorageAccountConnectionStringMSI string ='AzureWebJobsStorage__${storageAccountName}'
 
 resource  functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name:  functionPlanName
@@ -824,6 +875,10 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       functionAppScaleLimit: 200
       minimumElasticInstanceCount: 0
       appSettings: [
+        // {
+        //   name: 'WEBSITE_RUN_FROM_PACKAGE'
+        //   value: '1'
+        // }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
           value: '~4'
@@ -996,6 +1051,11 @@ module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noMan
   }
 }
 
-
-
-
+// module  assignRoleToFunctionAppForStorageAccount 'assignRbacRoleToFunctionAppForStorageAccount.bicep' = if (!noManagedIdent) {
+//   name: 'assign-stg-account-role-to-functionApp'
+//   params: {
+// 	roleScope: resourceGroup().id
+// 	functionAppName: functionApp.name
+//     functionPrincipalId: functionApp.identity.principalId
+//   }
+// }
