@@ -14,7 +14,7 @@ param functionPrincipalId string
 
 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(functionPrincipalId, 'Azure Service Bus Data Receiver', roleScope)
+  name: guid(functionPrincipalId, 'Storage Blob Data Owner', roleScope)
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
     principalId: functionApp.identity.principalId

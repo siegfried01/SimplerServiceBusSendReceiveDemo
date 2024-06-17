@@ -452,7 +452,7 @@ var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName
 output outStorageAccountConnectionString1 string = storageAccountConnectionString
 
 var storageAccountConnectionStringMSI='AzureWebJobsStorage__${storageAccountName}'
-var outputStorageAccountConnectionStringMSI string ='AzureWebJobsStorage__${storageAccountName}'
+output outputStorageAccountConnectionStringMSI string = storageAccountConnectionStringMSI
 
 resource  functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name:  functionPlanName
@@ -893,7 +893,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'AzureWebJobsStorage'
-          value: storageAccountConnectionString 
+          value: storageAccountConnectionStringMSI 
         }
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
@@ -1051,11 +1051,11 @@ module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noMan
   }
 }
 
-// module  assignRoleToFunctionAppForStorageAccount 'assignRbacRoleToFunctionAppForStorageAccount.bicep' = if (!noManagedIdent) {
-//   name: 'assign-stg-account-role-to-functionApp'
-//   params: {
-// 	roleScope: resourceGroup().id
-// 	functionAppName: functionApp.name
-//     functionPrincipalId: functionApp.identity.principalId
-//   }
-// }
+module  assignRoleToFunctionAppForStorageAccount 'assignRbacRoleToFunctionAppForStorageAccount.bicep' = if (!noManagedIdent) {
+  name: 'assign-stg-account-role-to-functionApp'
+  params: {
+	roleScope: resourceGroup().id
+	functionAppName: functionApp.name
+    functionPrincipalId: functionApp.identity.principalId
+  }
+}
