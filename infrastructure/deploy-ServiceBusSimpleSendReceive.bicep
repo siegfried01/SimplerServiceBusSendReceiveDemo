@@ -895,10 +895,10 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
           name: 'AzureWebJobsStorage'
           value: storageAccountConnectionStringMSI 
         }
-        {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: storageAccountConnectionString
-        }
+        // {
+        //   name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+        //   value: storageAccountConnectionStringMSI
+        // }
         {
           name: 'busNS'
           value: serviceBusNS
