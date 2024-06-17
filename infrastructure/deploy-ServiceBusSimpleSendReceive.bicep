@@ -247,7 +247,7 @@ EOF
  */
 param location string = resourceGroup().location
 param uniquePrefix string = uniqueString(resourceGroup().id)
-param serviceBusQueueName string = 'mainqueue001' 
+param serviceBusQueueName string = 'mainqueue001'
 
 param serviceBusNS string = '${uniquePrefix}-servicebus'
 param functionAppName string = '${uniquePrefix}-func'
@@ -257,22 +257,8 @@ param storageAccountName string = '${uniquePrefix}stg'
 
 param noManagedIdent bool = false
 param actionGroups_Application_Insights_Smart_Detection_name string = '${uniquePrefix}-detector'
-param actiongroups_application_insights_smart_detection_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_generalpurposecosmos/providers/microsoft.insights/actiongroups/application insights smart detection'
+param actiongroups_application_insights_smart_detection_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_generalpurposecosmos/providers/actiongroups/application insights smart detection'
 param logAnalyticsWS string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2'
-
-resource appInsights 'microsoft.insights/components@2020-02-02' = {
-  name: appInsightsName
-  location: location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    RetentionInDays: 90
-    WorkspaceResourceId: logAnalyticsWS
-    IngestionMode: 'LogAnalytics'
-    publicNetworkAccessForIngestion: 'Enabled'
-    publicNetworkAccessForQuery: 'Enabled'
-  }
-}
 
 resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
   name: serviceBusNS
@@ -289,52 +275,48 @@ resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
     privateEndpointConnections: []
     zoneRedundant: false
   }
-}
 
-resource serviceBusNS_RootManageSharedAccessKey 'Microsoft.ServiceBus/namespaces/authorizationrules@2022-10-01-preview' = {
-  parent: serviceBus
-  name: 'RootManageSharedAccessKey'
-  properties: {
-    rights: [
-      'Listen'
-      'Manage'
-      'Send'
-    ]
+  resource serviceBusNS_RootManageSharedAccessKey 'authorizationrules@2022-10-01-preview' = {
+    name: 'RootManageSharedAccessKey'
+    properties: {
+      rights: [
+        'Listen'
+        'Manage'
+        'Send'
+      ]
+    }
+  }
+
+  resource serviceBusNS_default 'networkrulesets@2022-10-01-preview' = {
+    name: 'default'
+    properties: {
+      publicNetworkAccess: 'Enabled'
+      defaultAction: 'Allow'
+      virtualNetworkRules: []
+      ipRules: []
+      trustedServiceAccessEnabled: false
+    }
+  }
+
+  resource serviceBusQueue 'queues@2022-10-01-preview' = {
+    name: serviceBusQueueName
+    properties: {
+      maxMessageSizeInKilobytes: 256
+      lockDuration: 'PT1M'
+      maxSizeInMegabytes: 1024
+      requiresDuplicateDetection: false
+      requiresSession: false
+      defaultMessageTimeToLive: 'P14D'
+      deadLetteringOnMessageExpiration: false
+      enableBatchedOperations: true
+      duplicateDetectionHistoryTimeWindow: 'PT10M'
+      maxDeliveryCount: 10
+      status: 'Active'
+      enablePartitioning: false
+      enableExpress: false
+    }
   }
 }
-
-resource serviceBusNS_default 'Microsoft.ServiceBus/namespaces/networkrulesets@2022-10-01-preview' = {
-  parent: serviceBus
-  name: 'default'
-  properties: {
-    publicNetworkAccess: 'Enabled'
-    defaultAction: 'Allow'
-    virtualNetworkRules: []
-    ipRules: []
-    trustedServiceAccessEnabled: false
-  }
-}
-
-resource serviceBusQueue 'Microsoft.ServiceBus/namespaces/queues@2022-10-01-preview' = {
-  parent: serviceBus
-  name: serviceBusQueueName
-  properties: {
-    maxMessageSizeInKilobytes: 256
-    lockDuration: 'PT1M'
-    maxSizeInMegabytes: 1024
-    requiresDuplicateDetection: false
-    requiresSession: false
-    defaultMessageTimeToLive: 'P14D'
-    deadLetteringOnMessageExpiration: false
-    enableBatchedOperations: true
-    duplicateDetectionHistoryTimeWindow: 'PT10M'
-    maxDeliveryCount: 10
-    status: 'Active'
-    enablePartitioning: false
-    enableExpress: false
-  }
-}
-
 
 resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01' = {
   name: storageAccountName
@@ -391,7 +373,7 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
         publicAccess: 'None'
       }
     }
-    
+
     resource storageAccountDefault_azure_webjobs_secrets 'containers@2023-04-01' = {
       name: 'azure-webjobs-secrets'
       properties: {
@@ -404,7 +386,7 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
       }
     }
   }
-  
+
   resource Microsoft_Storage_storageAccounts_fileServices_storageAccountDefault 'fileServices@2023-04-01' = {
     name: 'default'
     properties: {
@@ -428,7 +410,7 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
       }
     }
   }
-  
+
   resource Microsoft_Storage_storageAccounts_queueServices_storageAccountDefault 'queueServices@2023-04-01' = {
     name: 'default'
     properties: {
@@ -437,7 +419,7 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
       }
     }
   }
-  
+
   resource Microsoft_Storage_storageAccounts_tableServices_storageAccountDefault 'tableServices@2023-04-01' = {
     name: 'default'
     properties: {
@@ -451,11 +433,11 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
 var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountForFuncApp.name};AccountKey=${storageAccountForFuncApp.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 output outStorageAccountConnectionString1 string = storageAccountConnectionString
 
-var storageAccountConnectionStringMSI='AzureWebJobsStorage__${storageAccountName}'
+var storageAccountConnectionStringMSI = 'AzureWebJobsStorage__${storageAccountName}'
 output outputStorageAccountConnectionStringMSI string = storageAccountConnectionStringMSI
 
-resource  functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
-  name:  functionPlanName
+resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: functionPlanName
   location: location
   sku: {
     name: 'Y1'
@@ -476,6 +458,280 @@ resource  functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
     targetWorkerCount: 0
     targetWorkerSizeId: 0
     zoneRedundant: false
+  }
+}
+resource appInsights 'microsoft.insights/components@2020-02-02' = {
+  name: appInsightsName
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    RetentionInDays: 90
+    WorkspaceResourceId: logAnalyticsWS
+    IngestionMode: 'LogAnalytics'
+    publicNetworkAccessForIngestion: 'Enabled'
+
+    publicNetworkAccessForQuery: 'Enabled'
+  }
+
+  resource appInsights_DegradationIndependencyDuration 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'degradationindependencyduration'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'degradationindependencyduration'
+        DisplayName: 'Degradation in dependency duration'
+        Description: 'Smart Detection rules notify you of performance anomaly issues.'
+        HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: false
+        SupportsEmailNotifications: true
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_DegradationInServerResponseTime 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'degradationinserverresponsetime'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'degradationinserverresponsetime'
+        DisplayName: 'Degradation in server response time'
+        Description: 'Smart Detection rules notify you of performance anomaly issues.'
+        HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: false
+        SupportsEmailNotifications: true
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsight_DigestMailConfiguration 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'digestMailConfiguration'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'digestMailConfiguration'
+        DisplayName: 'Digest Mail Configuration'
+        Description: 'This rule describes the digest mail preferences'
+        HelpUrl: 'www.homail.com'
+        IsHidden: true
+        IsEnabledByDefault: true
+        IsInPreview: false
+        SupportsEmailNotifications: true
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_Extension_BillingDataVolumeDailySpikeExtension 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'extension_billingdatavolumedailyspikeextension'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'extension_billingdatavolumedailyspikeextension'
+        DisplayName: 'Abnormal rise in daily data volume (preview)'
+        Description: 'This detection rule automatically analyzes the billing data generated by your application, and can warn you about an unusual increase in your application\'s billing costs'
+        HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/billing-data-volume-daily-spike.md'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: true
+        SupportsEmailNotifications: false
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_Extension_CanaryExtension 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'extension_canaryextension'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'extension_canaryextension'
+        DisplayName: 'Canary extension'
+        Description: 'Canary extension'
+        HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/'
+        IsHidden: true
+        IsEnabledByDefault: true
+        IsInPreview: true
+        SupportsEmailNotifications: false
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_Extension_ExceptionChangeExtension 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'extension_exceptionchangeextension'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'extension_exceptionchangeextension'
+        DisplayName: 'Abnormal rise in exception volume (preview)'
+        Description: 'This detection rule automatically analyzes the exceptions thrown in your application, and can warn you about unusual patterns in your exception telemetry.'
+        HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/abnormal-rise-in-exception-volume.md'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: true
+        SupportsEmailNotifications: false
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_Extension_MemoryLeakExtension 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'extension_memoryleakextension'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'extension_memoryleakextension'
+        DisplayName: 'Potential memory leak detected (preview)'
+        Description: 'This detection rule automatically analyzes the memory consumption of each process in your application, and can warn you about potential memory leaks or increased memory consumption.'
+        HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/memory-leak.md'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: true
+        SupportsEmailNotifications: false
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_Extension_SecurityExtensionsPackage 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'extension_securityextensionspackage'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'extension_securityextensionspackage'
+        DisplayName: 'Potential security issue detected (preview)'
+        Description: 'This detection rule automatically analyzes the telemetry generated by your application and detects potential security issues.'
+        HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/application-security-detection-pack.md'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: true
+        SupportsEmailNotifications: false
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_Extension_TraceSeverityDetector 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'extension_traceseveritydetector'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'extension_traceseveritydetector'
+        DisplayName: 'Degradation in trace severity ratio (preview)'
+        Description: 'This detection rule automatically analyzes the trace logs emitted from your application, and can warn you about unusual patterns in the severity of your trace telemetry.'
+        HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/degradation-in-trace-severity-ratio.md'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: true
+        SupportsEmailNotifications: false
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_longDependencyDuration 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'longdependencyduration'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'longdependencyduration'
+        DisplayName: 'Long dependency duration'
+        Description: 'Smart Detection rules notify you of performance anomaly issues.'
+        HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: false
+        SupportsEmailNotifications: true
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_MigrationToAlertRulesCompleted 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'migrationToAlertRulesCompleted'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'migrationToAlertRulesCompleted'
+        DisplayName: 'Migration To Alert Rules Completed'
+        Description: 'A configuration that controls the migration state of Smart Detection to Smart Alerts'
+        HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
+        IsHidden: true
+        IsEnabledByDefault: false
+        IsInPreview: true
+        SupportsEmailNotifications: false
+      }
+      Enabled: false
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_SlowPageLoadTime 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'slowpageloadtime'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'slowpageloadtime'
+        DisplayName: 'Slow page load time'
+        Description: 'Smart Detection rules notify you of performance anomaly issues.'
+        HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: false
+        SupportsEmailNotifications: true
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
+  }
+
+  resource appInsights_SlowServerResponseTime 'ProactiveDetectionConfigs@2018-05-01-preview' = {
+    name: 'slowserverresponsetime'
+    location: location
+    properties: {
+      RuleDefinitions: {
+        Name: 'slowserverresponsetime'
+        DisplayName: 'Slow server response time'
+        Description: 'Smart Detection rules notify you of performance anomaly issues.'
+        HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
+        IsHidden: false
+        IsEnabledByDefault: true
+        IsInPreview: false
+        SupportsEmailNotifications: true
+      }
+      Enabled: true
+      SendEmailsToSubscriptionOwners: true
+      CustomEmails: []
+    }
   }
 }
 
@@ -510,7 +766,6 @@ resource actionGroups_Application_Insights_Smart_Detection_name_resource 'micros
   }
 }
 
-
 resource smartDetectorAlertRulesFailureAnomalies 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = {
   name: '${uniquePrefix}-failure anomalies'
   location: 'global'
@@ -534,280 +789,6 @@ resource smartDetectorAlertRulesFailureAnomalies 'microsoft.alertsmanagement/sma
   }
 }
 
-resource appInsights_DegradationIndependencyDuration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'degradationindependencyduration'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'degradationindependencyduration'
-      DisplayName: 'Degradation in dependency duration'
-      Description: 'Smart Detection rules notify you of performance anomaly issues.'
-      HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: false
-      SupportsEmailNotifications: true
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_DegradationInServerResponseTime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'degradationinserverresponsetime'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'degradationinserverresponsetime'
-      DisplayName: 'Degradation in server response time'
-      Description: 'Smart Detection rules notify you of performance anomaly issues.'
-      HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: false
-      SupportsEmailNotifications: true
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsight_DigestMailConfiguration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'digestMailConfiguration'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'digestMailConfiguration'
-      DisplayName: 'Digest Mail Configuration'
-      Description: 'This rule describes the digest mail preferences'
-      HelpUrl: 'www.homail.com'
-      IsHidden: true
-      IsEnabledByDefault: true
-      IsInPreview: false
-      SupportsEmailNotifications: true
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_Extension_BillingDataVolumeDailySpikeExtension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'extension_billingdatavolumedailyspikeextension'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'extension_billingdatavolumedailyspikeextension'
-      DisplayName: 'Abnormal rise in daily data volume (preview)'
-      Description: 'This detection rule automatically analyzes the billing data generated by your application, and can warn you about an unusual increase in your application\'s billing costs'
-      HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/billing-data-volume-daily-spike.md'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: true
-      SupportsEmailNotifications: false
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_Extension_CanaryExtension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'extension_canaryextension'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'extension_canaryextension'
-      DisplayName: 'Canary extension'
-      Description: 'Canary extension'
-      HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/'
-      IsHidden: true
-      IsEnabledByDefault: true
-      IsInPreview: true
-      SupportsEmailNotifications: false
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_Extension_ExceptionChangeExtension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'extension_exceptionchangeextension'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'extension_exceptionchangeextension'
-      DisplayName: 'Abnormal rise in exception volume (preview)'
-      Description: 'This detection rule automatically analyzes the exceptions thrown in your application, and can warn you about unusual patterns in your exception telemetry.'
-      HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/abnormal-rise-in-exception-volume.md'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: true
-      SupportsEmailNotifications: false
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_Extension_MemoryLeakExtension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'extension_memoryleakextension'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'extension_memoryleakextension'
-      DisplayName: 'Potential memory leak detected (preview)'
-      Description: 'This detection rule automatically analyzes the memory consumption of each process in your application, and can warn you about potential memory leaks or increased memory consumption.'
-      HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/memory-leak.md'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: true
-      SupportsEmailNotifications: false
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_Extension_SecurityExtensionsPackage 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'extension_securityextensionspackage'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'extension_securityextensionspackage'
-      DisplayName: 'Potential security issue detected (preview)'
-      Description: 'This detection rule automatically analyzes the telemetry generated by your application and detects potential security issues.'
-      HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/application-security-detection-pack.md'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: true
-      SupportsEmailNotifications: false
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_Extension_TraceSeverityDetector 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'extension_traceseveritydetector'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'extension_traceseveritydetector'
-      DisplayName: 'Degradation in trace severity ratio (preview)'
-      Description: 'This detection rule automatically analyzes the trace logs emitted from your application, and can warn you about unusual patterns in the severity of your trace telemetry.'
-      HelpUrl: 'https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/degradation-in-trace-severity-ratio.md'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: true
-      SupportsEmailNotifications: false
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_longDependencyDuration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'longdependencyduration'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'longdependencyduration'
-      DisplayName: 'Long dependency duration'
-      Description: 'Smart Detection rules notify you of performance anomaly issues.'
-      HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: false
-      SupportsEmailNotifications: true
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_MigrationToAlertRulesCompleted 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'migrationToAlertRulesCompleted'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'migrationToAlertRulesCompleted'
-      DisplayName: 'Migration To Alert Rules Completed'
-      Description: 'A configuration that controls the migration state of Smart Detection to Smart Alerts'
-      HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
-      IsHidden: true
-      IsEnabledByDefault: false
-      IsInPreview: true
-      SupportsEmailNotifications: false
-    }
-    Enabled: false
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_SlowPageLoadTime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'slowpageloadtime'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'slowpageloadtime'
-      DisplayName: 'Slow page load time'
-      Description: 'Smart Detection rules notify you of performance anomaly issues.'
-      HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: false
-      SupportsEmailNotifications: true
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-resource appInsights_SlowServerResponseTime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
-  parent: appInsights
-  name: 'slowserverresponsetime'
-  location: location
-  properties: {
-    RuleDefinitions: {
-      Name: 'slowserverresponsetime'
-      DisplayName: 'Slow server response time'
-      Description: 'Smart Detection rules notify you of performance anomaly issues.'
-      HelpUrl: 'https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics'
-      IsHidden: false
-      IsEnabledByDefault: true
-      IsInPreview: false
-      SupportsEmailNotifications: true
-    }
-    Enabled: true
-    SendEmailsToSubscriptionOwners: true
-    CustomEmails: []
-  }
-}
-
-
 output serviceBusEndpoint1 string = serviceBus.properties.serviceBusEndpoint
 var serviceBusKeyId = '${serviceBus.id}/AuthorizationRules/RootManageSharedAccessKey'
 var serviceBusConnection = listKeys(serviceBusKeyId, serviceBus.apiVersion).primaryConnectionString
@@ -820,20 +801,20 @@ var serviceBusConnection = listKeys(serviceBusKeyId, serviceBus.apiVersion).prim
 var ServiceBusConnection__fullyQualifiedNamespace = '${serviceBus.name}.servicebus.windows.net'
 output ServiceBusConnectionManagedIdentity string = ServiceBusConnection__fullyQualifiedNamespace
 
-var serviceBusEndPoint = split(serviceBusConnection,';')[0]
-var serviceBusConnectionViaMSI= '${serviceBusEndPoint};Authentication=ManagedIdentity'
+var serviceBusEndPoint = split(serviceBusConnection, ';')[0]
+var serviceBusConnectionViaMSI = '${serviceBusEndPoint};Authentication=ManagedIdentity'
 output outputServiceBusEndpoint string = serviceBusEndPoint
 output outputServiceBusConnectionViaMSI string = serviceBusConnectionViaMSI
 output serviceBusConnectionString string = serviceBusConnection
 
 output busNS string = serviceBusNS
-output queue string = serviceBusQueue.name
+output queue string = serviceBus::serviceBusQueue.name
 
 resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   name: functionAppName
   location: location
   kind: 'functionapp'
-  identity:{
+  identity: {
     type: 'SystemAssigned'
   }
 
@@ -851,7 +832,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         hostType: 'Repository'
       }
     ]
-    serverFarmId:  functionPlan.id
+    serverFarmId: functionPlan.id
     reserved: false
     isXenon: false
     hyperV: false
@@ -893,14 +874,14 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'AzureWebJobsStorage'
-          value: storageAccountConnectionStringMSI 
+          value: storageAccountConnectionStringMSI
         }
         // WEBSITE_CONTENTAZUREFILECONNECTIONSTRING https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#website_contentazurefileconnectionstring
         // Azure Files doesn't support using managed identity when accessing the file share. For more information, see Azure Files supported authentication scenarios.
         // Share-level permissions for all authenticated identities: https://learn.microsoft.com/en-us/azure/storage/files/storage-files-identity-ad-ds-assign-permissions?tabs=azure-cli#share-level-permissions-for-all-authenticated-identities
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: storageAccountConnectionStringMSI
+          value: storageAccountConnectionString
         }
         {
           name: 'busNS'
@@ -937,19 +918,19 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     storageAccountRequired: false
     keyVaultReferenceIdentity: 'SystemAssigned'
   }
-  
+
   resource sourcecontrol 'sourcecontrols@2020-12-01' = {
     name: 'web'
     properties: {
       repoUrl: 'https://github.com/siegfried01/SimplerServiceBusSendReceiveDemo.git'
       branch: 'azure-source-control-2024-jun-14-13'
-      isManualIntegration: false      
+      isManualIntegration: false
     }
-  }  
-  
+  }
+
   resource azurewebsites_net 'hostNameBindings@2023-12-01' = {
     name: '${functionAppName}.azurewebsites.net'
-  
+
     properties: {
       siteName: functionAppName
       hostNameType: 'Verified'
@@ -961,7 +942,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       allow: true
     }
   }
-  
+
   resource functionAppScm 'basicPublishingCredentialsPolicies@2023-12-01' = {
     name: 'scm'
     properties: {
@@ -969,7 +950,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     }
   }
 }
-
 
 resource functionAppConfig 'Microsoft.Web/sites/config@2023-12-01' = {
   parent: functionApp
@@ -1045,20 +1025,20 @@ resource functionAppConfig 'Microsoft.Web/sites/config@2023-12-01' = {
   }
 }
 
-module  assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noManagedIdent) {
+module assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noManagedIdent) {
   name: 'assign-role-to-functionApp'
   params: {
-	roleScope: resourceGroup().id
-	functionAppName: functionApp.name
+    roleScope: resourceGroup().id
+    functionAppName: functionApp.name
     functionPrincipalId: functionApp.identity.principalId
   }
 }
 
-module  assignRoleToFunctionAppForStorageAccount 'assignRbacRoleToFunctionAppForStorageAccount.bicep' = if (!noManagedIdent) {
+module assignRoleToFunctionAppForStorageAccount 'assignRbacRoleToFunctionAppForStorageAccount.bicep' = if (!noManagedIdent) {
   name: 'assign-stg-account-role-to-functionApp'
   params: {
-	roleScope: resourceGroup().id
-	functionAppName: functionApp.name
+    roleScope: resourceGroup().id
+    functionAppName: functionApp.name
     functionPrincipalId: functionApp.identity.principalId
   }
 }
