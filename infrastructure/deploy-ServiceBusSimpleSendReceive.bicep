@@ -14,6 +14,7 @@ EOF
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
    $env:serviceBusQueueName = 'mainqueue001'
    $noManagedIdent=[bool]0
+   $useKVForStgConnectionString=[bool]0
    $env:storageAccountName="$($env:uniquePrefix)funcstg"
    $env:functionAppName="$($env:uniquePrefix)-func"
    $env:funcPlanName="$($env:uniquePrefix)-plan-func"
@@ -28,11 +29,12 @@ EOF
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters "{'uniquePrefix': {'value': '$env:uniquePrefix'}}"                         `
      "{'location': {'value': '$env:loc'}}"                                                   `
+     "{'ownerId': {'value': '$env:AZURE_OBJECTID'}}"                                         `
      "{'noManagedIdent': {'value': $noManagedIdent}}"                                        `
+     "{'useKVForStgConnectionString': {'value': $useKVForStgConnectionString}}"              `
      "{'storageAccountName': {'value': '$env:storageAccountName'}}"                          `
      "{'functionAppName': {'value': '$env:functionAppName'}}"                                `
      "{'functionPlanName': {'value': '$env:funcPlanName'}}"                                  `
-     "{'serviceBusNS': {'value': '$env:serviceBusNS'}}"                                      `
      "{'serviceBusNS': {'value': '$env:serviceBusNS'}}"                                      `
      "{'serviceBusQueueName': {'value': '$env:serviceBusQueueName'}}"                        `
      "{'logAnalyticsWS': {'value': '$env:logAnalyticsWS'}}"                                  `
@@ -43,6 +45,16 @@ EOF
    emacs ESC 2 F10
    Begin commands to shut down this deployment using Azure CLI with PowerShell
    write-output "Step 2: begin shutdown delete (contents only) resource group $env:rg $(Get-Date)"
+   $kv=(Get-AzResource -ResourceGroupName $env:rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
+   If (![string]::IsNullOrEmpty($kv)) {
+     write-output "keyvault=$kv"
+     write-output "az keyvault delete --name '$($env:uniquePrefix)-kv' -g '$env:rg'"
+     az keyvault delete --name "$($env:uniquePrefix)-kv" -g "$env:rg"
+     write-output "az keyvault purge --name `"$($env:uniquePrefix)-kv`" --location $env:loc"
+     az keyvault purge --name "$($env:uniquePrefix)-kv" --location $env:loc 
+   } Else {
+     write-output "No key vault to delete & purge"
+   }
    write-output "az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg  | ForEach-Object { $_ -replace '`r', ''}"
    az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg  | ForEach-Object { $_ -replace "`r", ""}
    write-output "showdown is complete $env:rg $(Get-Date)" 
@@ -237,6 +249,21 @@ EOF
    az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan
    End commands to deploy this file using Azure CLI with PowerShell
 
+   emacs ESC 17 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 17 Delete & purge key vault if there are any"
+   $kv=(Get-AzResource -ResourceGroupName $env:rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
+   If (![string]::IsNullOrEmpty($kv)) {
+     write-output "keyvault=$kv"
+     write-output "az keyvault delete --name '$($env:uniquePrefix)-kv' -g '$env:rg'"
+     az keyvault delete --name "$($env:uniquePrefix)-kv" -g "$env:rg"
+     write-output "az keyvault purge --name `"$($env:uniquePrefix)-kv`" --location $env:loc"
+     az keyvault purge --name "$($env:uniquePrefix)-kv" --location $env:loc 
+   } Else {
+     write-output "No key vault to delete & purge"
+   }
+   End commands to deploy this file using Azure CLI with PowerShell
+
    Begin common epilog commands
    az resource list -g $env:rg --query "[?resourceGroup=='$env:rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table  | ForEach-Object { $_ -replace "`r", ""}
    $elapsedTime = $(get-date) - $StartTime
@@ -256,6 +283,8 @@ param appInsightsName string = '${uniquePrefix}-appins'
 param storageAccountName string = '${uniquePrefix}stg'
 
 param noManagedIdent bool = false
+param ownerId string = '' // objectId of the owner (developer)
+param useKVForStgConnectionString bool = true
 param actionGroups_Application_Insights_Smart_Detection_name string = '${uniquePrefix}-detector'
 param actiongroups_application_insights_smart_detection_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_generalpurposecosmos/providers/actiongroups/application insights smart detection'
 param logAnalyticsWS string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2'
@@ -362,6 +391,7 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
         enabled: false
       }
     }
+    // ERROR: {"code": "InvalidTemplate", "message": "Deployment template validation failed: 'The template resource '/default/azure-webjobs-hosts' for type 'Microsoft.Storage/storageAccounts/blobServices/containers' at line '130' and column '73' has incorrect segment lengths. A nested resource type must have identical number of segments as its resource name. A root resource type must have segment length one greater than its resource name. Please see https://aka.ms/arm-syntax-resources for usage details.'.", "additionalInfo": [{"type": "TemplateViolation", "info": {"lineNumber": 130, "linePosition": 73, "path": "properties.template.resources[3].type"}}]}
     resource storageAccountDefault_azure_webjobs_hosts 'containers@2023-04-01' = {
       name: 'azure-webjobs-hosts'
       properties: {
@@ -430,6 +460,7 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
   }
 }
 
+output outputOwnerId string = ownerId
 var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountForFuncApp.name};AccountKey=${storageAccountForFuncApp.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 output outStorageAccountConnectionString1 string = storageAccountConnectionString
 
@@ -810,6 +841,46 @@ output serviceBusConnectionString string = serviceBusConnection
 output busNS string = serviceBusNS
 output queue string = serviceBus::serviceBusQueue.name
 
+// I don't know if we need this key vault for the storage account connection string.
+// The problem is that we cannot use a managed identity to access the storage account connection string for the app settting WEBSITE_CONTENTAZUREFILECONNECTIONSTRING (as per the documentation).
+// This app setting is required for linux & windows for consumption and elastic premium plans (what is an elastic premium plan? It is not in the pricing calculator). 
+// Apparenlty, it is not required for dedicated (standard?) plans which we will probably use in production.
+//
+// I could try to put this in a seperate module and see if that alleviatges the circular dependency.
+
+resource kv 'Microsoft.KeyVault/vaults@2022-02-01-preview'= {
+  name: '${uniquePrefix}-kv'
+  location: location
+  properties: {
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    enabledForDeployment: true
+    enabledForDiskEncryption: true
+    enabledForTemplateDeployment: true
+    enableRbacAuthorization: true // this allows use to skip the access policy
+    tenantId: subscription().tenantId    
+  }
+}
+
+resource kvaadb2cSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' = {
+  parent: kv
+  name: 'storageAccountConnectionString'
+  properties: {
+    value: storageAccountConnectionString
+  }
+}
+// https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references?tabs=azure-cli#source-app-settings-from-key-vault
+// Source app settings from key vault: https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references?tabs=azure-cli#source-app-settings-from-key-vault
+// "Unable to resolve Azure Files Settings from Key Vault. Details: Unable to resolve setting: WEBSITE_CONTENTAZUREFILECONNECTIONSTRING with error: InvalidSyntax."
+// @Microsoft.KeyVault(VaultName=myvault;SecretName=mysecret)
+var storageAccountConnectionStringKV = '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=storageAccountConnectionString)'
+// "Unable to resolve Azure Files Settings from Key Vault. Details: Unable to resolve setting: WEBSITE_CONTENTAZUREFILECONNECTIONSTRING with error: InvalidSyntax."
+// @Microsoft.KeyVault(SecretUri=https://myvault.vault.azure.net/secrets/mysecret/)
+//var storageAccountConnectionStringKV = '@Microsoft.KeyVault(SecretUri=https://${kv.name}.vault.azure.net/secrets/storageAccountConnectionString/)'
+
+
 resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   name: functionAppName
   location: location
@@ -874,14 +945,35 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'AzureWebJobsStorage'
-          value: storageAccountConnectionStringMSI
+          value: storageAccountConnectionStringMSI //storageAccountConnectionStringKV // storageAccountConnectionStringMSI
         }
         // WEBSITE_CONTENTAZUREFILECONNECTIONSTRING https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#website_contentazurefileconnectionstring
+        // This setting is required for Consumption and Elastic Premium plan apps running on both Windows and Linux. It's not required for Dedicated plan apps, which aren't dynamically scaled by Functions.
         // Azure Files doesn't support using managed identity when accessing the file share. For more information, see Azure Files supported authentication scenarios.
         // Share-level permissions for all authenticated identities: https://learn.microsoft.com/en-us/azure/storage/files/storage-files-identity-ad-ds-assign-permissions?tabs=azure-cli#share-level-permissions-for-all-authenticated-identities
+        // 
+        // Using storageAccountConnectionStringKV causes a circular dependency. Maybe we could just comment this out for production? I cannot find "Elastic Premium plan" in the pricing calculator.
+        //
+        // ERROR: {"code": "InvalidTemplateDeployment", "message": "The template deployment 'SBusSndRcv' is not valid according to the validation procedure. The tracking id is '1cdc6d7c-ffd6-4c26-821f-8e865fb90ce6'. See inner errors for details."}
+        // 
+        // Inner Errors: 
+        // {"code": "ValidationForResourceFailed", "message": "Validation failed for a resource. Check 'Error.Details[0]' for more information."}
+        // 
+        // Inner Errors: 
+        // {"code": "CouldNotAccessStorageAccount", "message": "No valid combination of connection string and storage account was found."}        
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: storageAccountConnectionString
+          value: useKVForStgConnectionString?storageAccountConnectionStringKV : storageAccountConnectionString 
+          //"The parameter WEBSITE_CONTENTAZUREFILECONNECTIONSTRING has an invalid value."
+          //value: reference(resourceId('Microsoft.KeyVault/vaults/secrets', kv.name, kvaadb2cSecret.name), '2016-10-01').secretUri
+	      //"Unable to resolve Azure Files Settings from Key Vault. Details: Unable to resolve setting: WEBSITE_CONTENTAZUREFILECONNECTIONSTRING with error: AccessToKeyVaultDenied."
+          //value: '@Microsoft.KeyVault(SecretUri=https://${kv.name}.vault.azure.net/secrets/storageAccountConnectionString)'
+	  
+          //"No valid combination of connection string and storage account was found."
+          //value: '@Microsoft.KeyVault(SecretUri=https://${kv.name}.vault.azure.net/secrets/storageAccountConnectionString)'
+          //"No valid combination of connection string and storage account was found."
+          //value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=storageAccountConnectionString)'
+          //value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=storageAccountConnectionString)'
         }
         {
           name: 'busNS'
@@ -1036,6 +1128,15 @@ module assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noMana
 
 module assignRoleToFunctionAppForStorageAccount 'assignRbacRoleToFunctionAppForStorageAccount.bicep' = if (!noManagedIdent) {
   name: 'assign-stg-account-role-to-functionApp'
+  params: {
+    roleScope: resourceGroup().id
+    functionAppName: functionApp.name
+    functionPrincipalId: functionApp.identity.principalId
+  }
+}
+
+module assignRoleToFunctionAppForKV 'assignRbacRoleToFunctionAppForKVAccess.bicep' = if (!noManagedIdent) {
+  name: 'assign-key-vault-role-to-functionApp'
   params: {
     roleScope: resourceGroup().id
     functionAppName: functionApp.name
