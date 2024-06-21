@@ -11,6 +11,9 @@ EOF
    $env:rg="rg_$env:name"
    write-output "resource group=$env:rg"
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"jqo0osm3qxqr"} Else { "veyf0f1ncz4i" })"
+   $env:repoURL="$(If ($env:USERNAME -eq "v-richardsi") {"https://github.com/siegfried01/HelloBlazorSvr.git"} Else { "https://github.com/MSPON-187/HelloBlazorSvr.git" })"
+   $env:gitToken="$(If ($env:USERNAME -eq "v-richardsi") {$null} Else { "--git-token ${env:GITHUB_TOKEN}" })"
+   $env:gitTokenPath="$(If ($null -ne $env:gitToken) {"--git-token ${env:gitToken}"} )"
    $env:loc="eastus2"
    $env:funcLoc=$env:loc
    $env:functionAppName="$($env:uniquePrefix)-func"
@@ -37,7 +40,7 @@ EOF
    write-output "Step 1: deploy resources in bicep: service bus, functionapp, webapp & plan"
    pushd ..
    write-output "az deployment group create --name $env:name --resource-group $env:rg --template-file  infrastructure/deploy-protectServiceBusWebAppWithPrivateEndpoint.bicep"
-   az deployment group create --name $env:name --resource-group $env:rg  --template-file  infrastructure/deploy-protectServiceBusWebAppWithPrivateEndpoint.bicep --parameters "{'funcLoc': {'value': 'eastus2'}}" "{'noManagedIdent': {'value': $noManagedIdent}}" "{'uniquePrefix': {'value': '$env:uniquePrefix'}}"
+   az deployment group create --name $env:name --resource-group $env:rg  --template-file  infrastructure/deploy-protectServiceBusWebAppWithPrivateEndpoint.bicep --parameters "{'funcLoc': {'value': 'eastus2'}}" "{'noManagedIdent': {'value': $noManagedIdent}}" "{'uniquePrefix': {'value': '$env:uniquePrefix'}}" "{'repoURL': {'value': '$env:repoURL'}}" "{'gitHubToken': {'value': '$env:gitToken'}}"
    write-output "end deploy"
    popd
    End commands to deploy this file using Azure CLI with PowerShell
@@ -90,7 +93,7 @@ EOF
    emacs ESC 6 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    write-output "step 6 Publish"
-   write-output "dotnet publish ./SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0  --self-contained --output ./publish-functionapp"
+   write-output "dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0  --self-contained --output ./publish-functionapp"
    dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0 --self-contained --output ./publish-functionapp
    End commands to deploy this file using Azure CLI with PowerShell
 
@@ -110,6 +113,8 @@ EOF
    emacs ESC 8 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    write-output "step 8 configure function app"
+   # Should we create a Policy Assignment and a Policy Exemption to get past this issue:
+   # (RequestDisallowedByPolicy) Resource 'bastion' was disallowed by policy. Policy identifiers: '[{"policyAssignment":
    write-output "az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings 'WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1'"
    az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1
    write-output "az functionapp config set -g $env:rg -n $env:functionAppName --net-framework-version 'v8.0'"
@@ -177,8 +182,8 @@ EOF
    emacs ESC 15 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    write-output "step 15 deploy webapp helloworld .. this is redundant with the bicep code"
-   write-output "az webapp deployment source config --repo-url 'https://github.com/siegfried01/HelloBlazorSvr.git' --branch master --name '$($env:uniquePrefix)-webapp' --repository-type git --resource-group $env:rg"
-   az webapp deployment source config --repo-url "https://github.com/siegfried01/HelloBlazorSvr.git" --branch master --name "$($env:uniquePrefix)-webapp" --repository-type git --resource-group $env:rg 
+   write-output "az webapp deployment source config --repo-url $env:repoURL --branch master --name '$($env:uniquePrefix)-webapp' --repository-type git --resource-group $env:rg"
+   az webapp deployment source config --repo-url $env:repoURL --branch master --name "$($env:uniquePrefix)-webapp" --repository-type git --resource-group $env:rg 
    End commands to deploy this file using Azure CLI with PowerShell
    End 3 steps are redundant with the bicep code to deploy the diagnostic web app
 
@@ -191,6 +196,36 @@ EOF
    write-output "az network private-endpoint create --connection-name $env:peConn --name $env:peWebName --private-connection-resource-id $env:webapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName"
    az network private-endpoint create --connection-name $env:peConn --name $env:peWebName --private-connection-resource-id $env:webapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName
    End commands to deploy this file using Azure CLI with PowerShell
+
+
+  //  Begin next 3 steps are redundant with the bicep code to deploy the diagnostic web app
+  //  emacs ESC 14 F10
+  //  Begin commands to deploy this file using Azure CLI with PowerShell
+  //  write-output "step 14 deploy plan for helloworld .. this is redundant with the bicep code"
+  //  write-output "az appservice plan create -g $env:rg -n $env:uniquePrefix-plan-webapp --sku B1 -l $env:loc"
+  //  az appservice plan create -g $env:rg -n $env:uniquePrefix-plan-webapp --sku B1 -l $env:loc
+  //  End commands to deploy this file using Azure CLI with PowerShell
+
+  //  emacs ESC 15 F10
+  //  Begin commands to deploy this file using Azure CLI with PowerShell
+  //  write-output "step 15 create webapp helloworld .. this is redundant with the bicep code"
+  //  write-output "az webapp create --name '$($env:uniquePrefix)-webapp' --resource-group $env:rg --plan $env:uniquePrefix-plan-webapp"
+  //  az webapp create --name "$($env:uniquePrefix)-webapp" --resource-group $env:rg --plan $env:uniquePrefix-plan-webapp
+  //  End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC X F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   az webapp deployment source config --name '$($env:uniquePrefix)-webapp-helloworld' --resource-group $env:rg --repo-url 'https://github.com/siegfried01/HelloBlazorSvr.git'  --branch master --manual-integration --git-token <your-github-pat>
+   End commands to configure the WebApp with GitHub
+
+   emacs ESC 16 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   # Update - This code needs to specify one person's or a public repo as well as one perosn's token
+   write-output "step 16 deploy webapp helloworld .. this is redundant with the bicep code"
+   write-output "az webapp deployment source config --repo-url $env:repoURL --branch master --name '$($env:uniquePrefix)-webapp-helloworld' --repository-type git --resource-group $env:rg" 
+   az webapp deployment source config --repo-url $env:repoURL --branch master --name "$($env:uniquePrefix)-webapp-helloworld" --repository-type git --resource-group $env:rg
+   End commands to deploy this file using Azure CLI with PowerShell
+   End 3 steps are redundant with the bicep code to deploy the diagnostic web app
 
    emacs ESC 17 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
@@ -268,6 +303,7 @@ EOF
    write-output "step 26 webapp tail logs"
    write-output "az webapp log tail -g $env:rg -n $env:functionAppName"
    az webapp log tail -g $env:rg -n $env:functionAppName
+   # We should test to see if we get a forbidden message like we should
    End commands to deploy this file using Azure CLI with PowerShell
 
    emacs ESC 27 F10
@@ -281,7 +317,7 @@ EOF
    Begin commands to deploy this file using Azure CLI with PowerShell
    write-output "step 28 create service bus queue"
    write-output "az servicebus queue create --resource-group $rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueue"
-   az servicebus queue create --resource-group $rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueue
+   az servicebus queue create --resource-group $env:rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueue
    End commands to deploy this file using Azure CLI with PowerShell
 
    emacs ESC 29 F10
@@ -321,6 +357,8 @@ param funcLoc string = loc
 param noManagedIdent bool = false
 param uniquePrefix string = uniqueString(resourceGroup().id)
 param sbdemo001NS_name string = '${uniquePrefix}-servicebus'
+param repoURL string
+param gitHubToken string
 
 
 resource sbnsSimpleSendReceiveDemo 'Microsoft.ServiceBus/namespaces@2022-01-01-preview' = {
@@ -358,6 +396,118 @@ resource sbnsnwrSendReceiveDemo 'Microsoft.ServiceBus/namespaces/networkRuleSets
     defaultAction: 'Allow'
     virtualNetworkRules: []
     ipRules: [
+      {
+        ipMask: '20.37.194.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.42.226.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '191.235.226.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '52.228.82.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.195.68.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.41.194.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.204.197.192/26'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.37.158.0/23'
+        action: 'Allow'
+      }
+      {
+        ipMask: '52.150.138.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.42.5.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.41.6.0/23'
+        action: 'Allow'
+      }
+      {
+        ipMask: '40.80.187.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '40.119.10.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '40.82.252.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.42.134.0/23'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.125.155.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '40.74.28.0/23'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.166.41.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '51.104.26.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '174.165.193.226'
+        action: 'Allow'
+      }
+      {
+        ipMask: '174.21.173.9'
+        action: 'Allow'
+      }
+      {
+        ipMask: '167.220.149.157'
+        action: 'Allow'
+      }
+      {
+        ipMask: '131.107.1.233'
+        action: 'Allow'
+      }
+      {
+        ipMask: '70.106.212.29'
+        action: 'Allow'
+      }
+      {
+        ipMask: '131.107.1.156'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.150.248.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '131.107.174.88'
+        action: 'Allow'
+      }
+      {
+        ipMask: '167.220.148.16'
+        action: 'Allow'
+      }      
       {
         ipMask: '172.56.107.163'
         action: 'Allow'
@@ -709,14 +859,18 @@ resource site 'Microsoft.Web/sites@2020-12-01' = {
   ]
 }
 
-resource siteName_web 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
-  parent: site
-  name: 'web'
-  properties: {
-    repoUrl: 'https://github.com/siegfried01/HelloBlazorSvr.git'
-    branch: branch
-    isManualIntegration: false
-  }
-}
+// resource siteName_web 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
+//   parent: site
+//   name: 'web'
+//   properties: {
+//     repoUrl: repoURL
+//     branch: branch
+//     isManualIntegration: false
+//     // A token is needed for this
+//     gitHubActionConfiguration: {
+//         token: gitHubToken
+//     }
+//   }
+// }
 
 output appServiceEndpoint string = 'https://${site.properties.hostNames[0]}'
