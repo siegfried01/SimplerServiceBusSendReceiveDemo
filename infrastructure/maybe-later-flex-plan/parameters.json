@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sites_deletethisfunction000app_name": {
+            "value": null
+        },
+        "serverfarms_ASP_rgSBusSndRcv_db1a_name": {
+            "value": null
+        },
+        "storageAccounts_deletethis000stg_name": {
+            "value": null
+        },
+        "components_deletethisfunction000app_name": {
+            "value": null
+        },
+        "workspaces_DefaultWorkspace_acc26051_92a5_4ed1_a226_64a187bc27db_WUS2_externalid": {
+            "value": null
+        }
+    }
+}
