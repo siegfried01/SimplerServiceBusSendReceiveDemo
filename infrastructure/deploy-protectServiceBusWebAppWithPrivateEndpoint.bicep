@@ -6,15 +6,16 @@ EOF
 
    Begin common prolog commands
    $env:subscriptionId=(az account show --query id --output tsv | ForEach-Object { $_ -replace "`r", ""})
-   $noManagedIdent=($env:subscriptionId -eq "13c9725f-d20a-4c99-8ef4-d7bb78f98cff")
-   $env:name="SBusSndRcvPEP_$($env:USERNAME)"
+   $noManagedIdent=[bool]1
+   If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv_$($env:USERNAME)" }
    $env:rg="rg_$env:name"
    write-output "resource group=$env:rg"
-   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"jqo0osm3qxqr"} Else { "veyf0f1ncz4i" })"
+   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"kimwg"} ElseIf ($env:USERNAME -eq "v-paperry") { "qscbl" } ElseIf ($env:USERNAME -eq "hein") {"pcqam"} Else { "fvtlr" } )"
    $env:repoURL="$(If ($env:USERNAME -eq "v-richardsi") {"https://github.com/siegfried01/HelloBlazorSvr.git"} Else { "https://github.com/MSPON-187/HelloBlazorSvr.git" })"
    $env:gitToken="$(If ($env:USERNAME -eq "v-richardsi") {$null} Else { "--git-token ${env:GITHUB_TOKEN}" })"
    $env:gitTokenPath="$(If ($null -ne $env:gitToken) {"--git-token ${env:gitToken}"} )"
    $env:loc="eastus2"
+   $env:loc=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
    $env:funcLoc=$env:loc
    $env:functionAppName="$($env:uniquePrefix)-func"
    $env:functionAppPlanName="$($env:uniquePrefix)-func-plan"
@@ -32,15 +33,16 @@ EOF
    $env:vmName="$($env:uniquePrefix)vm"
    $env:VMSize="Standard_B4ms"
    $env:stgAccount="${env:uniquePrefix}stg"
-   write-output "starting $(Get-Date)"
+   $useMinSkuForVNet=[bool]1
+   write-output "starting $(Get-Date) rg=$($env:rg) location=$($env:loc)"
    End common prolog commands
    
    emacs F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    write-output "Step 1: deploy resources in bicep: service bus, functionapp, webapp & plan"
    pushd ..
-   write-output "az deployment group create --name $env:name --resource-group $env:rg --template-file  infrastructure/deploy-protectServiceBusWebAppWithPrivateEndpoint.bicep"
-   az deployment group create --name $env:name --resource-group $env:rg  --template-file  infrastructure/deploy-protectServiceBusWebAppWithPrivateEndpoint.bicep --parameters "{'funcLoc': {'value': 'eastus2'}}" "{'noManagedIdent': {'value': $noManagedIdent}}" "{'uniquePrefix': {'value': '$env:uniquePrefix'}}" "{'repoURL': {'value': '$env:repoURL'}}" "{'gitHubToken': {'value': '$env:gitToken'}}"
+   write-output "az deployment group create --name $env:name --resource-group $env:rg  --template-file  infrastructure/deploy-protectServiceBusWebAppWithPrivateEndpoint.bicep --parameters `"{'funcLoc': {'value': 'eastus2'}}`" `"{'noManagedIdent': {'value': $noManagedIdent}}`" `"{'uniquePrefix': {'value': '$env:uniquePrefix'}}`" `"{'repoURL': {'value': '$env:repoURL'}}`" `"{'gitHubToken': {'value': '$env:gitToken'}}`" `"{'useMinSkuForVNet': {'value': $useMinSkuForVNet}}`""
+   az deployment group create --name $env:name --resource-group $env:rg  --template-file  infrastructure/deploy-protectServiceBusWebAppWithPrivateEndpoint.bicep --parameters "{'funcLoc': {'value': 'eastus2'}}" "{'noManagedIdent': {'value': $noManagedIdent}}" "{'uniquePrefix': {'value': '$env:uniquePrefix'}}" "{'repoURL': {'value': '$env:repoURL'}}" "{'gitHubToken': {'value': '$env:gitToken'}}" "{'useMinSkuForVNet': {'value': $useMinSkuForVNet}}"
    write-output "end deploy"
    popd
    End commands to deploy this file using Azure CLI with PowerShell
@@ -57,8 +59,16 @@ EOF
    End commands to shut down this deployment using Azure CLI with PowerShell
 
    emacs ESC 3 F10
+   Begin commands to shut down this deployment using Azure CLI with PowerShell
+   write-output "Step 3: begin shutdown delete resource group $env:rg and its contents  $(Get-Date)"
+   write-output "az group delete -n $env:rg"
+   az group delete -n $env:rg --yes
+   write-output "showdown is complete $env:rg $(Get-Date)"
+   End commands to shut down this deployment using Azure CLI with PowerShell
+
+   emacs ESC 4 F10
    Begin commands for one time initializations using Azure CLI with PowerShell
-   write-output "step 3"
+   write-output "step 4 delete contents of resource group $($env:rg)"
    write-output "az group create -l $env:loc -n $env:rg"
    az group create -l $env:loc -n $env:rg
    write-output "{`n`"`$schema`": `"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#`",`n `"contentVersion`": `"1.0.0.0`",`n `"resources`": [] `n}" | Out-File -FilePath clear-resources.json
@@ -68,9 +78,9 @@ EOF
    ERROR: 'jqo0osm3qxqr-servicebus' is misspelled or not recognized by the system.
 
    // skip this step on initial setup! 
-   emacs ESC 4 F10
+   emacs ESC 5 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 4 delete service bus"
+   write-output "step 5 delete service bus"
    write-output "Remove-AzServiceBusNamespace -Name $env:serviceBusNS  -ResourceGroupName $env:rg"
    Remove-AzServiceBusNamespace -Name $env:serviceBusNS  -ResourceGroupName $env:rg
    End commands to deploy this file using Azure CLI with PowerShell
@@ -79,9 +89,9 @@ EOF
    // Monday May 20 2024 This would be redundant with the bicep if the bicep worked (error: The desired MinimumElasticInstanceCount (0) for the site 'jqo0osm3qxqr-func' must be greater than zero). So this works and is temporary until we can fix the bicep.
    // Tue May 21 10:10 2024 Bicep now works, error resolved.
    // Skip this step. When we use bicep, there is no storage account. I wonder if the bicep needs to create a storage account?
-   emacs ESC 5 F10
+   emacs ESC 6 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 5 create premium function app"
+   write-output "step 6 create premium function app"
    write-output "az storage account create --name $env:stgAccount --resource-group $env:rg --location $env:loc --sku Standard_LRS"
    az storage account create --name $env:stgAccount --resource-group $env:rg --location $env:loc --sku "Standard_LRS"
    write-output "az functionapp create --name $env:functionAppName --plan $env:functionAppPlanName --storage-account $env:stgAccount --resource-group $env:rg --runtime 'dotnet-isolated' --runtime-version '6.0' --functions-version '4'"
@@ -90,17 +100,17 @@ EOF
 
    This code will eventually reside in the pipeline yaml
    Tue May 21 10:12 2024: Tried and failed to skip this step with source control in the bicep.
-   emacs ESC 6 F10
+   emacs ESC 7 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 6 Publish"
+   write-output "step 7 Publish"
    write-output "dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0  --self-contained --output ./publish-functionapp"
    dotnet publish ../SimpleServiceBusSendReceiveAzureFuncs  --configuration Release  -f net8.0 --self-contained --output ./publish-functionapp
    End commands to deploy this file using Azure CLI with PowerShell
 
    This code will eventually reside in the pipeline yaml
-   emacs ESC 7 F10
+   emacs ESC 8 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 7 zip"
+   write-output "step 8 zip"
    pushd ./publish-functionapp
    write-output "Compress-Archive -Path .\* -DestinationPath ../publish-functionapp.zip -Force"
    Compress-Archive -Path .\* -DestinationPath ../publish-functionapp.zip -Force
@@ -110,9 +120,9 @@ EOF
    https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows
 
    This code will eventually reside in the pipeline yaml
-   emacs ESC 8 F10
+   emacs ESC 9 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 8 configure function app"
+   write-output "step 9 configure function app"
    # Should we create a Policy Assignment and a Policy Exemption to get past this issue:
    # (RequestDisallowedByPolicy) Resource 'bastion' was disallowed by policy. Policy identifiers: '[{"policyAssignment":
    write-output "az functionapp config appsettings set -g $env:rg -n $env:functionAppName --settings 'WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=1'"
@@ -127,33 +137,33 @@ EOF
 
    This code will eventually be replace by EV2 resident JSON ARM template that does zipdeploy
    Tue May 21 10:14 2024 This code needs to be executed several times
-   emacs ESC 9 F10
+   emacs ESC 10 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 9 deploy compiled C# code deployment to azure resource"
+   write-output "step 10 deploy compiled C# code deployment to azure resource"
    write-output "az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip"
    az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip
    End commands to deploy this file using Azure CLI with PowerShell
 
    // this comes from https://learn.microsoft.com/en-us/azure/private-link/create-private-endpoint-cli?toc=%2Fazure%2Fvirtual-network%2Ftoc.json&tabs=dynamic-ip
-   emacs ESC 10 F10
+   emacs ESC 11 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 10 create a VNET"
+   write-output "step 11 create a VNET"
    write-output "az network vnet create --resource-group $env:rg --location $env:loc --name $env:vnetName --address-prefixes 10.0.0.0/16 --subnet-name $env:subnetName --subnet-prefixes 10.0.0.0/24"
    az network vnet create --resource-group $env:rg --location $env:loc --name $env:vnetName --address-prefixes 10.0.0.0/16 --subnet-name $env:subnetName --subnet-prefixes 10.0.0.0/24   
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 11 F10
+   emacs ESC 12 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 11 create subnet"
+   write-output "step 12 create subnet"
    write-output "az network vnet subnet create --resource-group $env:rg --name $env:subnetName --vnet-name $env:vnetName --address-prefixes 10.0.1.0/26"
    az network vnet subnet create --resource-group $env:rg --name $env:subnetName --vnet-name $env:vnetName --address-prefixes 10.0.1.0/26
    End commands to deploy this file using Azure CLI with PowerShell
 
    Error from Fri May 17 2023 possibly fixed by upgrading azure functionapp from F1 Premium (EP1): ERROR: (BadRequest) Call to Microsoft.Web/sites failed. Error message: SkuCode 'Dynamic' is invalid.
    Tue May 21 10:26 2024: looks like this was fixed with premium function!
-   emacs ESC 12 F10
+   emacs ESC 13 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 12 get the functionapp and add it to the VNET"
+   write-output "step 13 get the functionapp and add it to the VNET"
    write-output "az functionapp list --resource-group $env:rg"
    az functionapp list --resource-group $env:rg
    $env:functionapp_id=$(az functionapp list --resource-group $env:rg --query '[].[id]' --output tsv)
@@ -165,31 +175,31 @@ EOF
    End commands to execute this file using Azure CLI with PowerShell
 
    Begin next 3 steps are redundant with the bicep code to deploy the diagnostic web app
-   emacs ESC 13 F10
+   emacs ESC 14 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 13 deploy plan for helloworld .. this is redundant with the bicep code"
+   write-output "step 14 deploy plan for helloworld .. this is redundant with the bicep code"
    write-output "az appservice plan create -g $env:rg -n $env:uniquePrefix-plan-webapp --sku B1 -l $env:loc"
    az appservice plan create -g $env:rg -n $env:uniquePrefix-plan-webapp --sku B1 -l $env:loc
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 14 F10
+   emacs ESC 15 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 14 create webapp helloworld .. this is redundant with the bicep code"
+   write-output "step 15 create webapp helloworld .. this is redundant with the bicep code"
    write-output "az webapp create --name '$($env:uniquePrefix)-webapp' --resource-group $env:rg --plan $env:uniquePrefix-plan-webapp"
    az webapp create --name "$($env:uniquePrefix)-webapp" --resource-group $env:rg --plan $env:uniquePrefix-plan-webapp
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 15 F10
+   emacs ESC 16 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 15 deploy webapp helloworld .. this is redundant with the bicep code"
+   write-output "step 16 deploy webapp helloworld .. this is redundant with the bicep code"
    write-output "az webapp deployment source config --repo-url $env:repoURL --branch master --name '$($env:uniquePrefix)-webapp' --repository-type git --resource-group $env:rg"
    az webapp deployment source config --repo-url $env:repoURL --branch master --name "$($env:uniquePrefix)-webapp" --repository-type git --resource-group $env:rg 
    End commands to deploy this file using Azure CLI with PowerShell
    End 3 steps are redundant with the bicep code to deploy the diagnostic web app
 
-   emacs ESC 16 F10
+   emacs ESC 17 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 16 get the webapp and add it to the VNET"
+   write-output "step 17 get the webapp and add it to the VNET"
    $env:webapp_id=$(az webapp list --resource-group $env:rg --query '[].[id]' --output tsv)
    write-output "Use a dynamic IP webapp id=$($env:webapp_id)"
    write-output "This takes a while $(Get-Date)"
@@ -199,16 +209,16 @@ EOF
 
 
   //  Begin next 3 steps are redundant with the bicep code to deploy the diagnostic web app
-  //  emacs ESC 14 F10
+  //  emacs ESC 18 F10
   //  Begin commands to deploy this file using Azure CLI with PowerShell
-  //  write-output "step 14 deploy plan for helloworld .. this is redundant with the bicep code"
+  //  write-output "step 18 deploy plan for helloworld .. this is redundant with the bicep code"
   //  write-output "az appservice plan create -g $env:rg -n $env:uniquePrefix-plan-webapp --sku B1 -l $env:loc"
   //  az appservice plan create -g $env:rg -n $env:uniquePrefix-plan-webapp --sku B1 -l $env:loc
   //  End commands to deploy this file using Azure CLI with PowerShell
 
-  //  emacs ESC 15 F10
+  //  emacs ESC 19 F10
   //  Begin commands to deploy this file using Azure CLI with PowerShell
-  //  write-output "step 15 create webapp helloworld .. this is redundant with the bicep code"
+  //  write-output "step 19 create webapp helloworld .. this is redundant with the bicep code"
   //  write-output "az webapp create --name '$($env:uniquePrefix)-webapp' --resource-group $env:rg --plan $env:uniquePrefix-plan-webapp"
   //  az webapp create --name "$($env:uniquePrefix)-webapp" --resource-group $env:rg --plan $env:uniquePrefix-plan-webapp
   //  End commands to deploy this file using Azure CLI with PowerShell
@@ -218,18 +228,18 @@ EOF
    az webapp deployment source config --name '$($env:uniquePrefix)-webapp-helloworld' --resource-group $env:rg --repo-url 'https://github.com/siegfried01/HelloBlazorSvr.git'  --branch master --manual-integration --git-token <your-github-pat>
    End commands to configure the WebApp with GitHub
 
-   emacs ESC 16 F10
+   emacs ESC 20 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    # Update - This code needs to specify one person's or a public repo as well as one perosn's token
-   write-output "step 16 deploy webapp helloworld .. this is redundant with the bicep code"
+   write-output "step 20 deploy webapp helloworld .. this is redundant with the bicep code"
    write-output "az webapp deployment source config --repo-url $env:repoURL --branch master --name '$($env:uniquePrefix)-webapp-helloworld' --repository-type git --resource-group $env:rg" 
    az webapp deployment source config --repo-url $env:repoURL --branch master --name "$($env:uniquePrefix)-webapp-helloworld" --repository-type git --resource-group $env:rg
    End commands to deploy this file using Azure CLI with PowerShell
    End 3 steps are redundant with the bicep code to deploy the diagnostic web app
 
-   emacs ESC 17 F10
+   emacs ESC 21 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 17 get the webapp and add it to the VNET"
+   write-output "step 21 get the webapp and add it to the VNET"
    $env:webapp_id=$(az webapp list --resource-group $env:rg --query '[].[id]' --output tsv)
    write-output "Use a dyanmic IP webapp id=$($env:webapp_id)"
    write-output "This takes a while $(Get-Date)"
@@ -237,23 +247,23 @@ EOF
    az network private-endpoint create --connection-name $env:peConn --name $env:peWebName --private-connection-resource-id $env:webapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 18 F10
+   emacs ESC 22 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 18 does not work on CorpNet"
+   write-output "Step 22 does not work on CorpNet"
    write-output "az network bastion create --resource-group $env:rg --name bastion --public-ip-address public-ip --vnet-name $env:vnetName --location $env:loc --allow-preview true"
    az network bastion create --resource-group $env:rg --name bastion --public-ip-address public-ip --vnet-name $env:vnetName --location $env:loc
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 19 F10
+   emacs ESC 23 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 19 Create private end point for the functionapp"
+   write-output "Step 23 Create private end point for the functionapp"
    write-output "az network public-ip create --resource-group $env:rg --name $env:pipFunctionAppName --sku Standard --zone 1 2 3"
    az network public-ip create --resource-group $env:rg --name $env:pipFunctionAppName --sku Standard --zone 1 2 3
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 20 F10
+   emacs ESC 24 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 20 get the functionapp and add it to the VNET"
+   write-output "step 24 get the functionapp and add it to the VNET"
    $env:functionapp_id=$(az functionapp list --resource-group $env:rg --query '[].[id]' --output tsv)
    write-output "Use a dyanmic IP functionapp id=$($env:functionapp_id)"
    write-output "This takes a while $(Get-Date)"
@@ -261,82 +271,82 @@ EOF
    az network private-endpoint create --connection-name $env:peConn --name $env:peFuncName --private-connection-resource-id $env:functionapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 21 F10
+   emacs ESC 25 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 21: Create a new private Azure DNS zone with az network private-dns zone create"
+   write-output "Step 25: Create a new private Azure DNS zone with az network private-dns zone create"
    write-output "az network private-dns zone create --resource-group $env:rg --name 'privatelink.azurewebsites.net'"
    az network private-dns zone create --resource-group $env:rg --name "privatelink.azurewebsites.net"
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 22 F10
+   emacs ESC 26 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 22: Link the DNS zone to the virtual network you created previously with az network private-dns link vnet create."
+   write-output "Step 26: Link the DNS zone to the virtual network you created previously with az network private-dns link vnet create."
    write-output "az network private-dns link vnet create  --resource-group $env:rg  --zone-name "privatelink.azurewebsites.net"  --name dns-link  --virtual-network $env:vnetName  --registration-enabled false"
    az network private-dns link vnet create  --resource-group $env:rg  --zone-name "privatelink.azurewebsites.net"  --name dns-link  --virtual-network $env:vnetName  --registration-enabled false
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 23 F10
+   emacs ESC 27 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 23: Create a DNS zone group with az network private-endpoint dns-zone-group create."
+   write-output "Step 27: Create a DNS zone group with az network private-endpoint dns-zone-group create."
    write-output "az network private-endpoint dns-zone-group create --resource-group $env:rg --endpoint-name $env:peFuncName --name zone-group --private-dns-zone 'privatelink.azurewebsites.net' --zone-name webapp"
    az network private-endpoint dns-zone-group create --resource-group $env:rg --endpoint-name $env:peFuncName --name zone-group --private-dns-zone "privatelink.azurewebsites.net" --zone-name webapp
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 24 F10
+   emacs ESC 28 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 24: Create a DNS zone group with az network private-endpoint dns-zone-group create."
+   write-output "Step 28: Create a DNS zone group with az network private-endpoint dns-zone-group create."
    write-output "az network private-endpoint dns-zone-group create --resource-group $env:rg --endpoint-name $env:peWebName --name zone-group --private-dns-zone 'privatelink.azurewebsites.net' --zone-name webapp"
    az network private-endpoint dns-zone-group create --resource-group $env:rg --endpoint-name $env:peWebName --name zone-group --private-dns-zone "privatelink.azurewebsites.net" --zone-name webapp
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 25 F10
+   emacs ESC 29 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 25: To verify the static IP address and the functionality of the private endpoint, a test virtual machine connected to your virtual network is required."
+   write-output "Step 29: To verify the static IP address and the functionality of the private endpoint, a test virtual machine connected to your virtual network is required."
    write-output "Create the virtual machine with az vm create. $(Get-Date)"
    write-output "az vm create --resource-group $env:rg  --name $env:vmName  --image Win2022Datacenter    --vnet-name $env:vnetName  --subnet $env:subnetName  --admin-username azureuser --size $env:VMSize"
    az vm create --resource-group $env:rg  --name $env:vmName  --image Win2022Datacenter --vnet-name $env:vnetName  --subnet $env:subnetName  --admin-username azureuser --admin-password JxQZEwsTc5y0bSIosT7KGa6 --size $env:VMSize
    write-output "Done creating VM $(Get-Date)"
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 26 F10
+   emacs ESC 30 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 26 webapp tail logs"
+   write-output "step 30 webapp tail logs"
    write-output "az webapp log tail -g $env:rg -n $env:functionAppName"
    az webapp log tail -g $env:rg -n $env:functionAppName
    # We should test to see if we get a forbidden message like we should
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 27 F10
+   emacs ESC 31 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 27 create premium service bus"
+   write-output "step 31 create premium service bus"
    write-output "az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Premium"
    az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Premium
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 28 F10
+   emacs ESC 32 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 28 create service bus queue"
+   write-output "step 32 create service bus queue"
    write-output "az servicebus queue create --resource-group $rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueue"
    az servicebus queue create --resource-group $env:rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueue
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 29 F10
+   emacs ESC 33 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 29 create private end point for service bus"
+   write-output "step 33 create private end point for service bus"
    write-output "az network private-endpoint create --name $env:peWebName --resource-group $env:rg --vnet-name your-vnet-name --subnet $env:subnetName --private-connection-resource-id (az servicebus namespace show --resource-group $env:rg --name $env:serviceBusNS --query id --output tsv) --connection-name $env:peConn"
    az network private-endpoint create --name $env:peWebName --resource-group $env:rg --vnet-name your-vnet-name --subnet $env:subnetName --private-connection-resource-id $(az servicebus namespace show --resource-group $env:rg --name $env:serviceBusNS --query id --output tsv) --connection-name $env:peConn
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 30 F10
+   emacs ESC 34 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 30 create private end point for service bus"
+   write-output "step 34 create private end point for service bus"
    write-output "az network private-endpoint create --name $env:peWebName --resource-group $env:rg --vnet-name your-vnet-name --subnet $env:subnetName --private-connection-resource-id (az servicebus namespace show --resource-group $env:rg --name $env:serviceBusNS --query id --output tsv) --connection-name $env:peConn"
    az network private-endpoint create --name $env:peWebName --resource-group $env:rg --vnet-name your-vnet-name --subnet $env:subnetName --private-connection-resource-id $(az servicebus namespace show --resource-group $env:rg --name $env:serviceBusNS --query id --output tsv) --connection-name $env:peConn
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 31 F10
+   emacs ESC 35 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 31 get the logs This is not working and I don't now why"
+   write-output "step 35 get the logs This is not working and I don't now why"
    write-output "curl -X GET 'https://$($env:uniquePrefix)-func.scm.azurewebsites.net/api/dump'"
    curl  "https://$($env:uniquePrefix)-func.scm.azurewebsites.net/api/dump"
    dir
@@ -351,6 +361,7 @@ EOF
 
  */
 
+param useMinSkuForVNet bool = true
 param queueName string = 'mainqueue001'
 param loc string = resourceGroup().location
 param funcLoc string = loc
@@ -359,14 +370,50 @@ param uniquePrefix string = uniqueString(resourceGroup().id)
 param sbdemo001NS_name string = '${uniquePrefix}-servicebus'
 param repoURL string
 param gitHubToken string
+param serviceBusSku string = useMinSkuForVNet ? 'Premium' : 'Basic'
 
+// What about the new Flex consumption plan? https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options?tabs=azure-portal
+// https://learn.microsoft.com/en-us/azure/app-service/overview-hosting-plans#should-i-put-an-app-in-a-new-plan-or-an-existing-plan
+
+// https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options?tabs=azure-portal
+//
+//   There are some limitations with using virtual network:
+//
+//  The feature is available from Flex Consumption, Elastic Premium, and
+//  App Service Premium V2 and Premium V3. It's also available in
+//  Standard but only from newer App Service deployments. If you are on
+//  an older deployment, you can only use the feature from a Premium V2
+//  App Service plan. If you want to make sure you can use the feature
+//  in a Standard App Service plan, create your app in a Premium V3 App
+//  Service plan. Those plans are only supported on our newest
+//  deployments. You can scale down if you desire after that.
+
+@description('The web site hosting plan')
+@allowed([
+  'F1'
+  'D1'
+  'B1'
+  'B2'
+  'B3'
+  'S1'
+  'S2'
+  'S3'
+  'P1'
+  'P2'
+  'P3'
+  'P4'
+  'EP1'
+  'P1V2'
+])
+param functionAppSku string = useMinSkuForVNet ? 'P1V2' : 'F1'
+param functionAppUseUseFlex bool = false
 
 resource sbnsSimpleSendReceiveDemo 'Microsoft.ServiceBus/namespaces@2022-01-01-preview' = {
   name: sbdemo001NS_name
   location: loc
   sku: {
-    name: 'Premium'
-    tier: 'Premium'
+    name: serviceBusSku
+    tier: serviceBusSku
   }
   properties: {
     minimumTlsVersion: '1.0'
@@ -516,6 +563,10 @@ resource sbnsnwrSendReceiveDemo 'Microsoft.ServiceBus/namespaces/networkRuleSets
         ipMask: '71.212.18.0'
         action: 'Allow'
       }
+      {
+        ipMask: '172.56.107.204'
+        action: 'Allow'
+      }
     ]
     trustedServiceAccessEnabled: true
   }  
@@ -558,11 +609,32 @@ output noManagedIdentoutput bool = noManagedIdent
 
 
 param ServiceBusSenderReceiverFuncs string = '${uniquePrefix}-func'
+// see output from az functionapp list-flexconsumption-locations --output table
+//  eastus
+//  northeurope
+//  southeastasia
+//  eastasia
+//  eastus2
+//  southcentralus
+//  australiaeast
+//  northcentralus(stage)
+//  westus2
+//  uksouth
+//  eastus2euap
+//  westus3
+//  swedencentral
+//  Looks like westus2 should work
 resource functionPlan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: '${uniquePrefix}-func-plan'
   location: funcLoc
-  sku: {
-    name: 'EP1'  // Elastic Premium
+  sku: functionAppUseUseFlex ? {
+    name: 'FC1'
+    tier: 'FlexConsumption'
+    size: 'FC1'
+    family: 'FC'
+    capacity: 0
+  } : {
+    name: functionAppSku
   }
   kind: 'functionapp'
   properties: {
@@ -570,7 +642,7 @@ resource functionPlan 'Microsoft.Web/serverfarms@2023-01-01' = {
     elasticScaleEnabled: false
     maximumElasticWorkerCount: 1
     isSpot: false
-    reserved: false
+    reserved: functionAppUseUseFlex? true : false // true for Flex, originally false
     isXenon: false
     hyperV: false
     targetWorkerCount: 0
@@ -653,7 +725,16 @@ resource ServiceBusSenderReceiverFunctions 'Microsoft.Web/sites@2023-01-01' = {
   //     branch: 'master'
   //     isManualIntegration: false      
   //   }
-  // }  
+  // }
+  
+  // resource sourcecontrol 'sourcecontrols@2020-12-01' = {
+  //   name: 'web'
+  //   properties: {
+  //     repoUrl: 'https://github.com/siegfried01/SimplerServiceBusSendReceiveDemo.git'
+  //     branch: 'azure-source-control-2024-jun-14-13'
+  //     isManualIntegration: false
+  //   }
+  // }
 }
 
 resource ServiceBusSenderReceiverFunctionsFtp 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-01-01' = {
@@ -859,18 +940,35 @@ resource site 'Microsoft.Web/sites@2020-12-01' = {
   ]
 }
 
-// resource siteName_web 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
-//   parent: site
-//   name: 'web'
-//   properties: {
-//     repoUrl: repoURL
-//     branch: branch
-//     isManualIntegration: false
-//     // A token is needed for this
-//     gitHubActionConfiguration: {
-//         token: gitHubToken
-//     }
-//   }
-// }
+resource siteName_web 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
+  parent: site
+  name: 'web'
+  properties: {
+    repoUrl: repoURL
+    branch: branch
+    isManualIntegration: false
+    // A token is needed for this
+    gitHubActionConfiguration: gitHubToken !=''?{
+        token: gitHubToken
+    }: null
+  }
+}
 
 output appServiceEndpoint string = 'https://${site.properties.hostNames[0]}'
+
+//  Mon Jun 24 14:59 2024
+//  ERROR: {
+//    "status": "Failed",
+//    "error": {
+//      "code": "DeploymentFailed",
+//      "target": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_SBusSndRcv/providers/Microsoft.Resources/deployments/SBusSndRcv",
+//      "message": "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.",
+//      "details": [
+//        {
+//          "code": "ResourceDeploymentFailure",
+//          "target": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_SBusSndRcv/providers/Microsoft.Web/sites/fvtlr-func/sourcecontrols/web",
+//          "message": "The resource write operation failed to complete successfully, because it reached terminal provisioning state 'Failed'."
+//        }
+//      ]
+//    }
+//  }

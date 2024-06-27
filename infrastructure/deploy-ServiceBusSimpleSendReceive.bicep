@@ -13,8 +13,19 @@ EOF
    $env:sp="spad_$env:name"
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
    $env:serviceBusQueueName = 'mainqueue001'
-   $noManagedIdent=[bool]0
+   $noManagedIdent=[bool]1
+   $useSourceControlLoadTestCode=If ($env:USERNAME -eq "shein") { [bool]1 } Else { [bool]0 }
+   $useServiceBusFireWall=[bool]1
    $useKVForStgConnectionString=[bool]0
+   $env:myIPAddress="172.56.107.204"
+   $usePremiumServiceBusFunctionApp=[bool]1
+   If ( $usePremiumServiceBusFunctionApp ) {
+     $env:functionAppSku='P1V2'
+     $env:serviceBusSku='Premium'
+   } Else {
+     $env:functionAppSku='Y1'
+     $env:serviceBusSku='Basic'
+   }
    $env:storageAccountName="$($env:uniquePrefix)funcstg"
    $env:functionAppName="$($env:uniquePrefix)-func"
    $env:funcPlanName="$($env:uniquePrefix)-plan-func"
@@ -27,17 +38,24 @@ EOF
    Begin commands to deploy this file using Azure CLI with PowerShell
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
-     --parameters "{'uniquePrefix': {'value': '$env:uniquePrefix'}}"                         `
+     --parameters                                                                            `
+     "{'uniquePrefix': {'value': '$env:uniquePrefix'}}"                                      `
      "{'location': {'value': '$env:loc'}}"                                                   `
      "{'ownerId': {'value': '$env:AZURE_OBJECTID'}}"                                         `
-     "{'noManagedIdent': {'value': $noManagedIdent}}"                                        `
-     "{'useKVForStgConnectionString': {'value': $useKVForStgConnectionString}}"              `
-     "{'storageAccountName': {'value': '$env:storageAccountName'}}"                          `
-     "{'functionAppName': {'value': '$env:functionAppName'}}"                                `
-     "{'functionPlanName': {'value': '$env:funcPlanName'}}"                                  `
-     "{'serviceBusNS': {'value': '$env:serviceBusNS'}}"                                      `
-     "{'serviceBusQueueName': {'value': '$env:serviceBusQueueName'}}"                        `
-     "{'logAnalyticsWS': {'value': '$env:logAnalyticsWS'}}"                                  `
+     "{'myIPAddress'                    : {'value': '$env:myIPAddress'}}"                    `
+     "{'noManagedIdent'                 : {'value': $noManagedIdent}}"                       `
+     "{'functionAppSku'                 : {'value': '$env:functionAppSku'}}"                 `
+     "{'serviceBusSku'                  : {'value': '$env:serviceBusSku'}}"                  `
+     "{'usePremiumServiceBusFunctionApp': {'value': $usePremiumServiceBusFunctionApp}}"      `
+     "{'useServiceBusFireWall'          : {'value': $useServiceBusFireWall}}"                `
+     "{'useKVForStgConnectionString'    : {'value': $useKVForStgConnectionString}}"          `
+     "{'useSourceControlLoadTestCode'   : {'value': $useSourceControlLoadTestCode}}"         `
+     "{'storageAccountName'             : {'value': '$env:storageAccountName'}}"             `
+     "{'functionAppName'                : {'value': '$env:functionAppName'}}"                `
+     "{'functionPlanName'               : {'value': '$env:funcPlanName'}}"                   `
+     "{'serviceBusNS'                   : {'value': '$env:serviceBusNS'}}"                   `
+     "{'serviceBusQueueName'            : {'value': '$env:serviceBusQueueName'}}"            `
+     "{'logAnalyticsWS'                 : {'value': '$env:logAnalyticsWS'}}"                 `
    | ForEach-Object { $_ -replace "`r", ""}
    write-output "end deploy $(Get-Date)"
    End commands to deploy this file using Azure CLI with PowerShell
@@ -45,19 +63,23 @@ EOF
    emacs ESC 2 F10
    Begin commands to shut down this deployment using Azure CLI with PowerShell
    write-output "Step 2: begin shutdown delete (contents only) resource group $env:rg $(Get-Date)"
-   $kv=(Get-AzResource -ResourceGroupName $env:rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
-   If (![string]::IsNullOrEmpty($kv)) {
-     write-output "keyvault=$kv"
-     write-output "az keyvault delete --name '$($env:uniquePrefix)-kv' -g '$env:rg'"
-     az keyvault delete --name "$($env:uniquePrefix)-kv" -g "$env:rg"
-     write-output "az keyvault purge --name `"$($env:uniquePrefix)-kv`" --location $env:loc"
-     az keyvault purge --name "$($env:uniquePrefix)-kv" --location $env:loc 
+   If ($env:USERNAME -eq "shein"){
+     $kv=(Get-AzResource -ResourceGroupName $env:rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
+     If (![string]::IsNullOrEmpty($kv)) {
+       write-output "keyvault=$kv"
+       write-output "az keyvault delete --name '$($env:uniquePrefix)-kv' -g '$env:rg'"
+       az keyvault delete --name "$($env:uniquePrefix)-kv" -g "$env:rg"
+       write-output "az keyvault purge --name `"$($env:uniquePrefix)-kv`" --location $env:loc"
+       az keyvault purge --name "$($env:uniquePrefix)-kv" --location $env:loc 
+     } Else {
+       write-output "No key vault to delete & purge"
+     }
    } Else {
-     write-output "No key vault to delete & purge"
+     write-output "Remember to purge the key vault"
    }
    write-output "az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg  | ForEach-Object { $_ -replace '`r', ''}"
    az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg  | ForEach-Object { $_ -replace "`r", ""}
-   write-output "showdown is complete $env:rg $(Get-Date)" 
+   write-output "shutdown is complete $env:rg $(Get-Date)" 
    End commands to shut down this deployment using Azure CLI with PowerShell
 
    emacs ESC 3 F10
@@ -71,7 +93,7 @@ EOF
    az ad sp delete --id $env:spId
    write-output "az group delete -n $env:rg"
    az group delete -n $env:rg --yes
-   write-output "showdown is complete $env:rg $(Get-Date)"
+   write-output "shutdown is complete $env:rg $(Get-Date)"
    End commands to shut down this deployment using Azure CLI with PowerShell
 
    emacs ESC 4 F10
@@ -135,13 +157,20 @@ EOF
    write-output "(setenv `"RG_WEBSITE_00`" `"$($env:rg)`")"
    write-output "(setenv `"SS_WEBSITE_00`" `"$($env:functionAppName)`"))"
    write-output "az webapp log tail -n `"$($env:functionAppName)`" -g `"$($env:rg)`""
-   write-output "az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom"
-   az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom
+   #write-output "az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom"
+   #az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom
+   write-output "az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings AzureWebJobsServiceBusConnection=$env:ServiceBusConnection"
+   az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings AzureWebJobsServiceBusConnection=$env:ServiceBusConnection
    End commands to deploy this file using Azure CLI with PowerShell
 
    emacs ESC 11 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 11 show service bus add connection string"
+   write-output "step 11 define environement variables"
+   $env:ServiceBusConnection=(az servicebus namespace authorization-rule keys list --resource-group $env:rg --namespace-name $env:serviceBusNS --name RootManageSharedAccessKey --query primaryConnectionString --output tsv)
+   #write-output "az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom"
+   #az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom
+   write-output "az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings AzureWebJobsServiceBusConnection=$env:ServiceBusConnection"
+   az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings AzureWebJobsServiceBusConnection=$env:ServiceBusConnection
    write-output "az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings busNS=$($env:serviceBusNS)"
    az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings busNS=$env:serviceBusNS
    write-output "az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings queue=$env:serviceBusQueueName"
@@ -244,24 +273,28 @@ EOF
 
    emacs ESC 16 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 16 Delete Function App"
-   write-output "az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan"
-   az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan
+   write-output "step 16 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."
+   # this worked: 06/26/2024 12:41:15 see *compilation*000003
+   # az functionapp deployment source config-zip -g $env:rg -n eizdf-hello-func --src "c:\Users\v-richardsi\source\repos\Siegfried Samples\zipDeployHttpFunc\infrastructure\publish-functionapp.zip"
+   az functionapp deployment source config-zip -g $env:rg -n eizdf-func --src "c:\Users\v-richardsi\source\repos\Siegfried Samples\zipDeployHttpFunc\infrastructure\publish-functionapp.zip"
    End commands to deploy this file using Azure CLI with PowerShell
 
    emacs ESC 17 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 17 Delete & purge key vault if there are any"
-   $kv=(Get-AzResource -ResourceGroupName $env:rg -ResourceType Microsoft.KeyVault/vaults  |  Select-Object -ExpandProperty Name)
-   If (![string]::IsNullOrEmpty($kv)) {
-     write-output "keyvault=$kv"
-     write-output "az keyvault delete --name '$($env:uniquePrefix)-kv' -g '$env:rg'"
-     az keyvault delete --name "$($env:uniquePrefix)-kv" -g "$env:rg"
-     write-output "az keyvault purge --name `"$($env:uniquePrefix)-kv`" --location $env:loc"
-     az keyvault purge --name "$($env:uniquePrefix)-kv" --location $env:loc 
-   } Else {
-     write-output "No key vault to delete & purge"
-   }
+   write-output "step 17 show Function App"
+   write-output "az functionapp config appsettings list --resource-group $env:rg --name $env:functionAppName"
+   az functionapp config appsettings list --resource-group $env:rg --name $env:functionAppName 
+   write-output "az functionapp config show --resource-group $env:rg --name $env:functionAppName"
+   az functionapp config show --resource-group $env:rg --name $env:functionAppName 
+   write-output "az functionapp show --resource-group $env:rg --name $env:functionAppName"
+   az functionapp show --resource-group $env:rg --name $env:functionAppName 
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 18 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   write-output "step 18 Delete Function App"
+   write-output "az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan"
+   az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan
    End commands to deploy this file using Azure CLI with PowerShell
 
    Begin common epilog commands
@@ -279,22 +312,26 @@ param serviceBusQueueName string = 'mainqueue001'
 param serviceBusNS string = '${uniquePrefix}-servicebus'
 param functionAppName string = '${uniquePrefix}-func'
 param functionPlanName string = '${uniquePrefix}-plan-func'
+param functionAppSku string = 'P1V2'
+param serviceBusSku string = 'Premium'
 param appInsightsName string = '${uniquePrefix}-appins'
 param storageAccountName string = '${uniquePrefix}stg'
-
+param myIPAddress string
 param noManagedIdent bool = false
 param ownerId string = '' // objectId of the owner (developer)
+param usePremiumServiceBusFunctionApp bool = false
+param useServiceBusFireWall bool = false
 param useKVForStgConnectionString bool = true
+param useSourceControlLoadTestCode bool = true
 param actionGroups_Application_Insights_Smart_Detection_name string = '${uniquePrefix}-detector'
-param actiongroups_application_insights_smart_detection_externalid string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_generalpurposecosmos/providers/actiongroups/application insights smart detection'
 param logAnalyticsWS string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2'
 
 resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
   name: serviceBusNS
   location: location
   sku: {
-    name: 'Basic'
-    tier: 'Basic'
+    name: usePremiumServiceBusFunctionApp ? serviceBusSku : 'Basic'
+    tier: usePremiumServiceBusFunctionApp ? serviceBusSku : 'Basic'
   }
   properties: {
     premiumMessagingPartitions: 0
@@ -322,15 +359,140 @@ resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
       publicNetworkAccess: 'Enabled'
       defaultAction: 'Allow'
       virtualNetworkRules: []
-      ipRules: []
-      trustedServiceAccessEnabled: false
+      ipRules: useServiceBusFireWall ?[
+      {
+        ipMask: '20.37.194.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.42.226.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '191.235.226.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '52.228.82.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.195.68.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.41.194.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.204.197.192/26'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.37.158.0/23'
+        action: 'Allow'
+      }
+      {
+        ipMask: '52.150.138.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.42.5.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.41.6.0/23'
+        action: 'Allow'
+      }
+      {
+        ipMask: '40.80.187.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '40.119.10.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '40.82.252.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.42.134.0/23'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.125.155.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '40.74.28.0/23'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.166.41.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '51.104.26.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '174.165.193.226'
+        action: 'Allow'
+      }
+      {
+        ipMask: '174.21.173.9'
+        action: 'Allow'
+      }
+      {
+        ipMask: '167.220.149.157'
+        action: 'Allow'
+      }
+      {
+        ipMask: '131.107.1.233'
+        action: 'Allow'
+      }
+      {
+        ipMask: '70.106.212.29'
+        action: 'Allow'
+      }
+      {
+        ipMask: '131.107.1.156'
+        action: 'Allow'
+      }
+      {
+        ipMask: '20.150.248.0/24'
+        action: 'Allow'
+      }
+      {
+        ipMask: '131.107.174.88'
+        action: 'Allow'
+      }
+      {
+        ipMask: '167.220.148.16'
+        action: 'Allow'
+      }      
+      {
+        ipMask: '172.56.107.163'
+        action: 'Allow'
+      }
+      {
+        ipMask: '71.212.18.0'
+        action: 'Allow'
+      }
+      {
+        ipMask: myIPAddress
+        action: 'Allow'
+      }
+    ] : []
+      trustedServiceAccessEnabled: useServiceBusFireWall? true : false
     }
   }
 
   resource serviceBusQueue 'queues@2022-10-01-preview' = {
     name: serviceBusQueueName
     properties: {
-      maxMessageSizeInKilobytes: 256
+      maxMessageSizeInKilobytes: usePremiumServiceBusFunctionApp? 1024 : 256
       lockDuration: 'PT1M'
       maxSizeInMegabytes: 1024
       requiresDuplicateDetection: false
@@ -470,7 +632,9 @@ output outputStorageAccountConnectionStringMSI string = storageAccountConnection
 resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: functionPlanName
   location: location
-  sku: {
+  sku: usePremiumServiceBusFunctionApp ? {
+    name: functionAppSku  
+  } : {
     name: 'Y1'
     tier: 'Dynamic'
     size: 'Y1'
@@ -840,6 +1004,7 @@ output serviceBusConnectionString string = serviceBusConnection
 
 output busNS string = serviceBusNS
 output queue string = serviceBus::serviceBusQueue.name
+output outNoManagedIdent bool = noManagedIdent
 
 // I don't know if we need this key vault for the storage account connection string.
 // The problem is that we cannot use a managed identity to access the storage account connection string for the app settting WEBSITE_CONTENTAZUREFILECONNECTIONSTRING (as per the documentation).
@@ -848,7 +1013,7 @@ output queue string = serviceBus::serviceBusQueue.name
 //
 // I could try to put this in a seperate module and see if that alleviatges the circular dependency.
 
-resource kv 'Microsoft.KeyVault/vaults@2022-02-01-preview'= {
+resource kv 'Microsoft.KeyVault/vaults@2022-02-01-preview' = if (useKVForStgConnectionString) {
   name: '${uniquePrefix}-kv'
   location: location
   properties: {
@@ -864,7 +1029,7 @@ resource kv 'Microsoft.KeyVault/vaults@2022-02-01-preview'= {
   }
 }
 
-resource kvaadb2cSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' = {
+resource kvaadb2cSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' =  if (useKVForStgConnectionString) {
   parent: kv
   name: 'storageAccountConnectionString'
   properties: {
@@ -916,7 +1081,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         allowedOrigins: [
           'https://portal.azure.com'
           'https://ms.portal.azure.com'
-          'https://172.56.107.163'
+          'https://${myIPAddress}'
         ]
         supportCredentials: false
       }
@@ -945,7 +1110,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'AzureWebJobsStorage'
-          value: storageAccountConnectionStringMSI //storageAccountConnectionStringKV // storageAccountConnectionStringMSI
+          value: noManagedIdent? storageAccountConnectionString: storageAccountConnectionStringMSI 
         }
         // WEBSITE_CONTENTAZUREFILECONNECTIONSTRING https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings#website_contentazurefileconnectionstring
         // This setting is required for Consumption and Elastic Premium plan apps running on both Windows and Linux. It's not required for Dedicated plan apps, which aren't dynamically scaled by Functions.
@@ -984,10 +1149,13 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
           value: serviceBusQueueName
         }
         {
-          name: 'ServiceBusConnection__fullyQualifiedNamespace'
-          value: ServiceBusConnection__fullyQualifiedNamespace
+          name: noManagedIdent? 'AzureWebJobsServiceBusConnection' : 'ServiceBusConnection__fullyQualifiedNamespace'
+          value: noManagedIdent? serviceBusConnection : ServiceBusConnection__fullyQualifiedNamespace
         }
+        // https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-service-bus-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv5&pivots=programming-language-javascript#connection-string
       ]
+      // this must be commented out or you will get this error:
+      // Microsoft.Azure.WebJobs.Host.Listeners.FunctionListenerException : The listener for function 'Functions.SimpleServiceBusReceiver' was unable to start. ---> System.ArgumentException : The connection string used for an Service Bus client must specify the Service Bus namespace host and either a Shared Access Key (both the name and value) OR a Shared Access Signature to be valid. (Parameter 'connectionString')
       // connectionStrings: [
       //   {
       //     type: 'Custom'
@@ -1011,7 +1179,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     keyVaultReferenceIdentity: 'SystemAssigned'
   }
 
-  resource sourcecontrol 'sourcecontrols@2020-12-01' = {
+  resource sourcecontrol 'sourcecontrols@2020-12-01' = if (useSourceControlLoadTestCode) {
     name: 'web'
     properties: {
       repoUrl: 'https://github.com/siegfried01/SimplerServiceBusSendReceiveDemo.git'
@@ -1143,3 +1311,109 @@ module assignRoleToFunctionAppForKV 'assignRbacRoleToFunctionAppForKVAccess.bice
     functionPrincipalId: functionApp.identity.principalId
   }
 }
+// Thu Jun 27 09:57 2024
+//  step 15 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported.
+//  az functionapp deployment source config-zip -g rg_SBusSndRcv -n iqa5jvm-func --src ./publish-functionapp.zip
+//  WARNING: Invalid version:  for runtime dotnet-isolated and os windows. Supported versions for runtime dotnet-isolated and os windows are: ['8', '7', '6', '.4.8']. Run 'az functionapp list-runtimes' for more details on supported runtimes. 
+//  WARNING: Getting scm site credentials for zip deployment
+//  WARNING: Starting zip deployment. This operation can take a while to complete ...
+//  WARNING: Deployment endpoint responded with status code 202
+//  WARNING: Configuring default logging for the app, if not already enabled
+//  ERROR: Zip deployment failed. {'id': 'temp-a38cdb3b', 'status': 3, 'status_text': '', 'author_email': 'N/A', 'author': 'N/A', 'deployer': 'az_cli_functions', 'message': 'Deploying from pushed zip file', 'progress': '', 'received_time': '2024-06-27T16:55:46.1677403Z', 'start_time': '2024-06-27T16:55:46.1677403Z', 'end_time': '2024-06-27T16:55:50.340319Z', 'last_success_end_time': None, 'complete': True, 'active': False, 'is_temp': True, 'is_readonly': False, 'url': 'https://iqa5jvm-func.scm.azurewebsites.net/api/deployments/latest', 'log_url': 'https://iqa5jvm-func.scm.azurewebsites.net/api/deployments/latest/log', 'site_name': 'iqa5jvm-func', 'provisioningState': 'Failed'}. Please run the command az webapp log deployment show -n iqa5jvm-func -g rg_SBusSndRcv
+//  Name                       Flavor       ResourceType                                        Region
+//  -------------------------  -----------  --------------------------------------------------  --------
+//  iqa5jvm-appins             web          Microsoft.Insights/components                       westus2
+//  iqa5jvm-servicebus                      Microsoft.ServiceBus/namespaces                     westus2
+//  iqa5jvmfuncstg             StorageV2    Microsoft.Storage/storageAccounts                   westus2
+//  iqa5jvm-detector                        Microsoft.Insights/actiongroups                     global
+//  iqa5jvm-plan-func          functionapp  Microsoft.Web/serverFarms                           westus2
+//  iqa5jvm-failure anomalies               microsoft.alertsManagement/smartDetectorAlertRules  global
+//  iqa5jvm-func               functionapp  Microsoft.Web/sites                                 westus2
+//  fvtlr-webapp-helloworld    app          Microsoft.Web/sites                                 westus2
+//  all done 06/27/2024 09:55:54 elapse time = 00:00:30 
+//  
+//  Process compilation finished
+//  
+
+
+// Thu Jun 27 06:21 2024 This error was not reproducable. On the second try everything was fine.
+//  ERROR: {
+//    "status": "Failed",
+//    "error": {
+//      "code": "DeploymentFailed",
+//      "target": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_SBusSndRcv/providers/Microsoft.Resources/deployments/SBusSndRcv",
+//      "message": "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.",
+//      "details": [
+//        {
+//          "code": "ResourceNotFound",
+//          "message": "The specified resource does not exist.\nRequestId:0384f4d0-a01a-000d-6592-c89fd6000000\nTime:2024-06-27T13:05:24.0831234Z"
+//        },
+//        {
+//          "code": "ResourceNotFound",
+//          "message": "The specified resource does not exist.\nRequestId:33a978e0-f003-003f-4d92-c89fa1000000\nTime:2024-06-27T13:05:22.0964885Z"
+//        },
+//        {
+//          "code": "InternalSrpError",
+//          "message": "Unknown error returned by stamp <?xml version=\"1.0\" encoding=\"utf-8\"?><m:error xmlns:m=\"http://schemas.microsoft.com/ado/2007/08/dataservices/metadata\"><m:code>ResourceNotFound</m:code><m:message xml:lang=\"en-US\">The specified resource does not exist.\nRequestId:990cd93b-9002-0039-1392-c8ac1e000000\nTime:2024-06-27T13:05:22.0754081Z</m:message></m:error>"
+//        },
+//        {
+//          "code": "ContainerOperationFailure",
+//          "message": "The specified resource does not exist.\nRequestId:621c0bd0-001e-003b-4d92-c812a6000000\nTime:2024-06-27T13:05:22.0486414Z"
+//        }
+//      ]
+//    }
+//  }
+//  
+
+//  Resource
+//  /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_SBusSndRcv/providers/Microsoft.Storage/storageAccounts/iqa5jvmfuncstg/blobServices/default
+//  Operation name
+//  Put blob service properties
+//  Time stamp
+//  Thu Jun 27 2024 06:05:22 GMT-0700 (Pacific Daylight Time)
+//  Event initiated by
+//  sheintze@hotmail.com
+//  Error code
+//  ContainerOperationFailure
+//  Message
+//  The specified resource does not exist. RequestId:621c0bd0-001e-003b-4d92-c812a6000000 Time:2024-06-27T13:05:22.0486414Z
+//  
+//  Resource
+//  /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_SBusSndRcv/providers/Microsoft.Storage/storageAccounts/iqa5jvmfuncstg/tableServices/default
+//  Operation name
+//  Set table service properties
+//  Time stamp
+//  Thu Jun 27 2024 06:05:22 GMT-0700 (Pacific Daylight Time)
+//  Event initiated by
+//  sheintze@hotmail.com
+//  Error code
+//  InternalSrpError
+//  Message
+//  Unknown error returned by stamp <?xml version="1.0" encoding="utf-8"?><m:error xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"><m:code>ResourceNotFound</m:code><m:message xml:lang="en-US">The specified resource does not exist. RequestId:990cd93b-9002-0039-1392-c8ac1e000000 Time:2024-06-27T13:05:22.0754081Z</m:message></m:error>
+//  
+//  Resource
+//  /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_SBusSndRcv/providers/Microsoft.Storage/storageAccounts/iqa5jvmfuncstg/queueServices/default
+//  Operation name
+//  Set queue service properties
+//  Time stamp
+//  Thu Jun 27 2024 06:05:22 GMT-0700 (Pacific Daylight Time)
+//  Event initiated by
+//  sheintze@hotmail.com
+//  Error code
+//  ResourceNotFound
+//  Message
+//  The specified resource does not exist. RequestId:33a978e0-f003-003f-4d92-c89fa1000000 Time:2024-06-27T13:05:22.0964885Z
+//  
+//  
+//  Resource
+//  /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_SBusSndRcv/providers/Microsoft.Storage/storageAccounts/iqa5jvmfuncstg/fileServices/default
+//  Operation name
+//  Put File Service Properties
+//  Time stamp
+//  Thu Jun 27 2024 06:05:24 GMT-0700 (Pacific Daylight Time)
+//  Event initiated by
+//  sheintze@hotmail.com
+//  Error code
+//  ResourceNotFound
+//  Message
+//  The specified resource does not exist. RequestId:0384f4d0-a01a-000d-6592-c89fd6000000 Time:2024-06-27T13:05:24.0831234Z
