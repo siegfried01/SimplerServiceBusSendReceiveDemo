@@ -1,0 +1,84 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sites_eizdf_func_name": {
+            "value": null
+        },
+        "sites_eizdf_webapp_name": {
+            "value": null
+        },
+        "components_eizdf_func_name": {
+            "value": null
+        },
+        "virtualMachines_eizdfvm_name": {
+            "value": null
+        },
+        "serverfarms_eizdf_plan_func_name": {
+            "value": null
+        },
+        "components_eizdf_appins_name": {
+            "value": null
+        },
+        "serverfarms_eizdf_plan_webapp_name": {
+            "value": null
+        },
+        "serverfarms_kimwg_plan_webapp_name": {
+            "value": null
+        },
+        "virtualNetworks_eizdf_vnet_name": {
+            "value": null
+        },
+        "actionGroups_eizdf_detector_name": {
+            "value": null
+        },
+        "storageAccounts_eizdffuncstg_name": {
+            "value": null
+        },
+        "networkInterfaces_eizdfvmVMNic_name": {
+            "value": null
+        },
+        "namespaces_eizdf_servicebus_name": {
+            "value": null
+        },
+        "networkSecurityGroups_eizdfvmNSG_name": {
+            "value": null
+        },
+        "publicIPAddresses_eizdfvmPublicIP_name": {
+            "value": null
+        },
+        "storageAccounts_aztblogsv12u2gzyv3w2zong_name": {
+            "value": null
+        },
+        "publicIPAddresses_eizdf_function_public_ip_name": {
+            "value": null
+        },
+        "privateEndpoints_eizdf_web_private_end_point_name": {
+            "value": null
+        },
+        "privateDnsZones_privatelink_azurewebsites_net_name": {
+            "value": null
+        },
+        "privateEndpoints_eizdf_func_private_end_point_name": {
+            "value": null
+        },
+        "networkSecurityGroups_eizdf_vnet_subnet_Bastion_nsg_name": {
+            "value": null
+        },
+        "smartdetectoralertrules_eizdf_failure_anomalies_name": {
+            "value": null
+        },
+        "smartdetectoralertrules_failure_anomalies___eizdf_func_name": {
+            "value": null
+        },
+        "actiongroups_application_insights_smart_detection_externalid": {
+            "value": null
+        },
+        "workspaces_defaultworkspace_13c9725f_d20a_4c99_8ef4_d7bb78f98cff_wus2_externalid": {
+            "value": null
+        },
+        "workspaces_DefaultWorkspace_13c9725f_d20a_4c99_8ef4_d7bb78f98cff_EUS2_externalid": {
+            "value": null
+        }
+    }
+}
