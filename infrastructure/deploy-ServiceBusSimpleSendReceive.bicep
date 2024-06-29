@@ -85,12 +85,12 @@ EOF
    emacs ESC 3 F10
    Begin commands to shut down this deployment using Azure CLI with PowerShell
    write-output "Step 3: begin shutdown delete resource group $env:rg and associated service principal $(Get-Date)"
-   write-output "az ad sp list --display-name $env:sp"
-   az ad sp list --display-name $env:sp
-   write-output "az ad sp list --filter "displayname eq '$env:sp'" --output json"
-   $env:spId=(az ad sp list --filter "displayname eq '$env:sp'" --query "[].id" --output tsv)
-   write-output "az ad sp delete --id $env:spId"
-   az ad sp delete --id $env:spId
+   #write-output "az ad sp list --display-name $env:sp"
+   #az ad sp list --display-name $env:sp
+   #write-output "az ad sp list --filter "displayname eq '$env:sp'" --output json"
+   #$env:spId=(az ad sp list --filter "displayname eq '$env:sp'" --query "[].id" --output tsv)
+   #write-output "az ad sp delete --id $env:spId"
+   #az ad sp delete --id $env:spId
    write-output "az group delete -n $env:rg"
    az group delete -n $env:rg --yes
    write-output "shutdown is complete $env:rg $(Get-Date)"
@@ -263,7 +263,9 @@ EOF
    End commands to deploy this file using Azure CLI with PowerShell
    
    Certificate verification failed. This typically happens when using Azure CLI behind a proxy that intercepts traffic with a self-signed certificate. Please add this certificate to the trusted CA bundle. More info: https://docs.microsoft.com/cli/azure/use-cli-effectively#work-behind-a-proxy.
-   This code will eventually be replace by EV2 resident JSON ARM template that does zipdeploy
+
+   if this step does not work, try zip Deploy
+   https://eizdf-func.scm.azurewebsites.net/ZipDeployUI
    emacs ESC 15 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    write-output "step 15 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."

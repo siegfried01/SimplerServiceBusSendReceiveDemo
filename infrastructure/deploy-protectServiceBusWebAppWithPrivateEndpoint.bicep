@@ -10,7 +10,7 @@ EOF
    If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv_$($env:USERNAME)" }
    $env:rg="rg_$env:name"
    write-output "resource group=$env:rg"
-   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"kimwg"} ElseIf ($env:USERNAME -eq "v-paperry") { "qscbl" } ElseIf ($env:USERNAME -eq "hein") {"pcqam"} Else { "fvtlr" } )"
+   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
    $env:repoURL="$(If ($env:USERNAME -eq "v-richardsi") {"https://github.com/siegfried01/HelloBlazorSvr.git"} Else { "https://github.com/MSPON-187/HelloBlazorSvr.git" })"
    $env:gitToken="$(If ($env:USERNAME -eq "v-richardsi") {$null} Else { "--git-token ${env:GITHUB_TOKEN}" })"
    $env:gitTokenPath="$(If ($null -ne $env:gitToken) {"--git-token ${env:gitToken}"} )"
@@ -207,146 +207,108 @@ EOF
    az network private-endpoint create --connection-name $env:peConn --name $env:peWebName --private-connection-resource-id $env:webapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName
    End commands to deploy this file using Azure CLI with PowerShell
 
-
-  //  Begin next 3 steps are redundant with the bicep code to deploy the diagnostic web app
-  //  emacs ESC 18 F10
-  //  Begin commands to deploy this file using Azure CLI with PowerShell
-  //  write-output "step 18 deploy plan for helloworld .. this is redundant with the bicep code"
-  //  write-output "az appservice plan create -g $env:rg -n $env:uniquePrefix-plan-webapp --sku B1 -l $env:loc"
-  //  az appservice plan create -g $env:rg -n $env:uniquePrefix-plan-webapp --sku B1 -l $env:loc
-  //  End commands to deploy this file using Azure CLI with PowerShell
-
-  //  emacs ESC 19 F10
-  //  Begin commands to deploy this file using Azure CLI with PowerShell
-  //  write-output "step 19 create webapp helloworld .. this is redundant with the bicep code"
-  //  write-output "az webapp create --name '$($env:uniquePrefix)-webapp' --resource-group $env:rg --plan $env:uniquePrefix-plan-webapp"
-  //  az webapp create --name "$($env:uniquePrefix)-webapp" --resource-group $env:rg --plan $env:uniquePrefix-plan-webapp
-  //  End commands to deploy this file using Azure CLI with PowerShell
-
-   emacs ESC X F10
+   emacs ESC 18 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   az webapp deployment source config --name '$($env:uniquePrefix)-webapp-helloworld' --resource-group $env:rg --repo-url 'https://github.com/siegfried01/HelloBlazorSvr.git'  --branch master --manual-integration --git-token <your-github-pat>
-   End commands to configure the WebApp with GitHub
-
-   emacs ESC 20 F10
-   Begin commands to deploy this file using Azure CLI with PowerShell
-   # Update - This code needs to specify one person's or a public repo as well as one perosn's token
-   write-output "step 20 deploy webapp helloworld .. this is redundant with the bicep code"
+   # This does not work on corpnet and needs to be done with Visual studio.
+   write-output "step 18 deploy webapp helloworld .. this is redundant with the bicep code"
    write-output "az webapp deployment source config --repo-url $env:repoURL --branch master --name '$($env:uniquePrefix)-webapp-helloworld' --repository-type git --resource-group $env:rg" 
    az webapp deployment source config --repo-url $env:repoURL --branch master --name "$($env:uniquePrefix)-webapp-helloworld" --repository-type git --resource-group $env:rg
    End commands to deploy this file using Azure CLI with PowerShell
    End 3 steps are redundant with the bicep code to deploy the diagnostic web app
 
-   emacs ESC 21 F10
-   Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 21 get the webapp and add it to the VNET"
-   $env:webapp_id=$(az webapp list --resource-group $env:rg --query '[].[id]' --output tsv)
-   write-output "Use a dyanmic IP webapp id=$($env:webapp_id)"
-   write-output "This takes a while $(Get-Date)"
-   write-output "az network private-endpoint create --connection-name $env:peConn --name $env:peWebName --private-connection-resource-id $env:webapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName"
-   az network private-endpoint create --connection-name $env:peConn --name $env:peWebName --private-connection-resource-id $env:webapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName
-   End commands to deploy this file using Azure CLI with PowerShell
-
-   emacs ESC 22 F10
+   emacs ESC 19 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 22 does not work on CorpNet"
+   write-output "Step 19 does not work on CorpNet"
    write-output "az network bastion create --resource-group $env:rg --name bastion --public-ip-address public-ip --vnet-name $env:vnetName --location $env:loc --allow-preview true"
    az network bastion create --resource-group $env:rg --name bastion --public-ip-address public-ip --vnet-name $env:vnetName --location $env:loc
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 23 F10
+   emacs ESC 20 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 23 Create private end point for the functionapp"
+   write-output "Step 20 Create private end point for the functionapp"
    write-output "az network public-ip create --resource-group $env:rg --name $env:pipFunctionAppName --sku Standard --zone 1 2 3"
    az network public-ip create --resource-group $env:rg --name $env:pipFunctionAppName --sku Standard --zone 1 2 3
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 24 F10
-   Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 24 get the functionapp and add it to the VNET"
-   $env:functionapp_id=$(az functionapp list --resource-group $env:rg --query '[].[id]' --output tsv)
-   write-output "Use a dyanmic IP functionapp id=$($env:functionapp_id)"
-   write-output "This takes a while $(Get-Date)"
-   write-output "az network private-endpoint create --connection-name $env:peConn --name $env:peFuncName --private-connection-resource-id $env:functionapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName"
-   az network private-endpoint create --connection-name $env:peConn --name $env:peFuncName --private-connection-resource-id $env:functionapp_id --resource-group $env:rg --subnet $env:subnetName --group-id sites --vnet-name $env:vnetName
-   End commands to deploy this file using Azure CLI with PowerShell
-
-   emacs ESC 25 F10
+   emacs ESC 21 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 25: Create a new private Azure DNS zone with az network private-dns zone create"
+   write-output "Step 21: Create a new private Azure DNS zone with az network private-dns zone create"
    write-output "az network private-dns zone create --resource-group $env:rg --name 'privatelink.azurewebsites.net'"
    az network private-dns zone create --resource-group $env:rg --name "privatelink.azurewebsites.net"
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 26 F10
+   emacs ESC 22 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 26: Link the DNS zone to the virtual network you created previously with az network private-dns link vnet create."
+   write-output "Step 22: Link the DNS zone to the virtual network you created previously with az network private-dns link vnet create."
    write-output "az network private-dns link vnet create  --resource-group $env:rg  --zone-name "privatelink.azurewebsites.net"  --name dns-link  --virtual-network $env:vnetName  --registration-enabled false"
    az network private-dns link vnet create  --resource-group $env:rg  --zone-name "privatelink.azurewebsites.net"  --name dns-link  --virtual-network $env:vnetName  --registration-enabled false
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 27 F10
+   emacs ESC 23 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 27: Create a DNS zone group with az network private-endpoint dns-zone-group create."
+   write-output "Step 23: Create a DNS zone group with az network private-endpoint dns-zone-group create."
    write-output "az network private-endpoint dns-zone-group create --resource-group $env:rg --endpoint-name $env:peFuncName --name zone-group --private-dns-zone 'privatelink.azurewebsites.net' --zone-name webapp"
    az network private-endpoint dns-zone-group create --resource-group $env:rg --endpoint-name $env:peFuncName --name zone-group --private-dns-zone "privatelink.azurewebsites.net" --zone-name webapp
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 28 F10
+   emacs ESC 24 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 28: Create a DNS zone group with az network private-endpoint dns-zone-group create."
+   write-output "Step 24: Create a DNS zone group with az network private-endpoint dns-zone-group create."
    write-output "az network private-endpoint dns-zone-group create --resource-group $env:rg --endpoint-name $env:peWebName --name zone-group --private-dns-zone 'privatelink.azurewebsites.net' --zone-name webapp"
    az network private-endpoint dns-zone-group create --resource-group $env:rg --endpoint-name $env:peWebName --name zone-group --private-dns-zone "privatelink.azurewebsites.net" --zone-name webapp
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 29 F10
+   emacs ESC 25 F10
    Begin commands to execute this file using Azure CLI with PowerShell
-   write-output "Step 29: To verify the static IP address and the functionality of the private endpoint, a test virtual machine connected to your virtual network is required."
+   write-output "Step 25: To verify the static IP address and the functionality of the private endpoint, a test virtual machine connected to your virtual network is required."
    write-output "Create the virtual machine with az vm create. $(Get-Date)"
    write-output "az vm create --resource-group $env:rg  --name $env:vmName  --image Win2022Datacenter    --vnet-name $env:vnetName  --subnet $env:subnetName  --admin-username azureuser --size $env:VMSize"
    az vm create --resource-group $env:rg  --name $env:vmName  --image Win2022Datacenter --vnet-name $env:vnetName  --subnet $env:subnetName  --admin-username azureuser --admin-password JxQZEwsTc5y0bSIosT7KGa6 --size $env:VMSize
    write-output "Done creating VM $(Get-Date)"
    End commands to execute this file using Azure CLI with PowerShell
 
-   emacs ESC 30 F10
+   emacs ESC 26 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 30 webapp tail logs"
+   write-output "step 26 webapp tail logs"
    write-output "az webapp log tail -g $env:rg -n $env:functionAppName"
    az webapp log tail -g $env:rg -n $env:functionAppName
    # We should test to see if we get a forbidden message like we should
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 31 F10
+   Skip this... already done and does 
+   emacs ESC 27 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 31 create premium service bus"
+   write-output "step 27 create premium service bus"
    write-output "az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Premium"
    az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Premium
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 32 F10
+   Skip this: already done.
+   emacs ESC 28 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 32 create service bus queue"
+   write-output "step 28 create service bus queue"
    write-output "az servicebus queue create --resource-group $rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueue"
    az servicebus queue create --resource-group $env:rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueue
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 33 F10
+   Service bus is protected by fire wall: skip this
+   emacs ESC 29 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 33 create private end point for service bus"
+   write-output "step 29 create private end point for service bus"
    write-output "az network private-endpoint create --name $env:peWebName --resource-group $env:rg --vnet-name your-vnet-name --subnet $env:subnetName --private-connection-resource-id (az servicebus namespace show --resource-group $env:rg --name $env:serviceBusNS --query id --output tsv) --connection-name $env:peConn"
    az network private-endpoint create --name $env:peWebName --resource-group $env:rg --vnet-name your-vnet-name --subnet $env:subnetName --private-connection-resource-id $(az servicebus namespace show --resource-group $env:rg --name $env:serviceBusNS --query id --output tsv) --connection-name $env:peConn
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 34 F10
+   emacs ESC 30 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 34 create private end point for service bus"
+   write-output "step 30 create private end point for service bus"
    write-output "az network private-endpoint create --name $env:peWebName --resource-group $env:rg --vnet-name your-vnet-name --subnet $env:subnetName --private-connection-resource-id (az servicebus namespace show --resource-group $env:rg --name $env:serviceBusNS --query id --output tsv) --connection-name $env:peConn"
    az network private-endpoint create --name $env:peWebName --resource-group $env:rg --vnet-name your-vnet-name --subnet $env:subnetName --private-connection-resource-id $(az servicebus namespace show --resource-group $env:rg --name $env:serviceBusNS --query id --output tsv) --connection-name $env:peConn
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 35 F10
+   emacs ESC 31 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 35 get the logs This is not working and I don't now why"
+   write-output "step 31 get the logs This is not working and I don't now why"
    write-output "curl -X GET 'https://$($env:uniquePrefix)-func.scm.azurewebsites.net/api/dump'"
    curl  "https://$($env:uniquePrefix)-func.scm.azurewebsites.net/api/dump"
    dir
