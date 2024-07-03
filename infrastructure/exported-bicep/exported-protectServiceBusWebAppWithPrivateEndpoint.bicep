@@ -1,3 +1,78 @@
+/*
+   From a (cygwin) bash prompt, use this perl one-liner to extract the powershell script fragments and exeucte them. This example shows how to execute steps 2 (shutdown) and steps 4-13 and skipping steps 7,8,9 because they don't work (yet). Adjust that list of steps according to your needs.
+
+   powershell -executionPolicy unrestricted -Command - <<EOF
+   `perl -lne 'sub range {$b=shift; $e=shift; $r=""; for(($b..$e)){ $r=$r."," if $r; $r=$r.$_;} $r } BEGIN {  $_ = shift; s/([0-9]+)-([0-9]+)/range($1,$2)/e; @idx=split ","; $c=0; $x=0; $f=0; $s=[] } $c++ if /^\s*Begin/; if (/^\s*End/) {$c--;$s[$f++]=""}; if ($x+$c>1) { $s->[$f]=$s->[$f].$_."\n"  } $x=$c; END { push(@idx, $#s); unshift @idx,0; for (@idx) { $p=$s->[$_]; chomp $p; print $p } }' "2,4-6,10-13" < "exported-protectServiceBusWebAppWithPrivateEndpoint.bicep"  `
+EOF
+
+   Begin common prolog commands
+   $env:subscriptionId=(az account show --query id --output tsv | ForEach-Object { $_ -replace "`r", ""})
+   $StartTime = $(get-date)
+   $env:name=If ($env:USERNAME -eq "shein") { "SBusSndRcv" } Else { "SBusSndRcv_$($env:USERNAME)" }
+   $env:rg="rg_$($env:name)"
+   $env:sp="spad_$env:name"
+   $env:location=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
+   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
+   End common prolog commands
+
+   emacs F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental --template-file  "exported-protectServiceBusWebAppWithPrivateEndpoint.bicep" --parameters "{'uniquePrefix': {'value': '$env:uniquePrefix'}}" "{'location': {'value': '$env:location'}}" | ForEach-Object { $_ -replace "`r", ""}
+   write-output "end deploy $(Get-Date)"
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   emacs ESC 2 F10
+   Begin commands to shut down this deployment using Azure CLI with PowerShell
+   write-output "begin shutdown $env:rg $(Get-Date)"
+   If (![string]::IsNullOrEmpty($kv)) {
+     write-output "keyvault=$kv"
+     write-output "az keyvault delete --name '$($env:uniquePrefix)-kv' -g '$env:rg'"
+     az keyvault delete --name "$($env:uniquePrefix)-kv" -g "$env:rg"
+     write-output "az keyvault purge --name `"$($env:uniquePrefix)-kv`" --location $env:location"
+     az keyvault purge --name "$($env:uniquePrefix)-kv" --location $env:location 
+   } Else {
+     write-output "No key vault to delete & purge"
+   }
+   az deployment group create --mode complete --template-file ./clear-resources.json --resource-group $env:rg  | ForEach-Object { $_ -replace "`r", ""}
+   write-output "showdown is complete $env:rg $(Get-Date)" 
+   End commands to shut down this deployment using Azure CLI with PowerShell
+
+   emacs ESC 3 F10
+   Begin commands to shut down this deployment using Azure CLI with PowerShell
+   write-output "Step 3: begin shutdown delete resource group $env:rg and associated service principal $(Get-Date)"
+   #write-output "az ad sp list --display-name $env:sp"
+   #az ad sp list --display-name $env:sp
+   #write-output "az ad sp list --filter `"displayname eq '$env:sp'`" --output json"
+   #$env:spId=(az ad sp list --filter "displayname eq '$env:sp'" --query "[].id" --output tsv)
+   #write-output "az ad sp delete --id $env:spId"
+   #az ad sp delete --id $env:spId
+   write-output "az group delete -n $env:rg"
+   az group delete -n $env:rg --yes
+   write-output "showdown is complete $env:rg $(Get-Date)"
+   End commands to shut down this deployment using Azure CLI with PowerShell
+
+   emacs ESC 4 F10
+   Begin commands for one time initializations using Azure CLI with PowerShell
+   az group create -l $env:location -n $env:rg
+   $env:id=(az group show --name $env:rg --query 'id' --output tsv)
+   write-output "id=$env:id"
+   #az ad sp create-for-rbac --name $env:sp --json-auth --role contributor --scopes $env:id
+   #write-output "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
+   write-output "{`n`"`$schema`": `"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#`",`n `"contentVersion`": `"1.0.0.0`",`n `"resources`": [] `n}" | Out-File -FilePath clear-resources.json
+   End commands for one time initializations using Azure CLI with PowerShell
+
+   Begin common epilog commands
+   az resource list -g $env:rg --query "[?resourceGroup=='$env:rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table  | ForEach-Object { $_ -replace "`r", ""}
+   $elapsedTime = $(get-date) - $StartTime
+   $totalTime = "{0:HH:mm:ss}" -f ([datetime]$elapsedTime.Ticks)
+   write-output "all done $(Get-Date) elapse time = $totalTime "
+   End common epilog commands
+
+ */
+
+param location string = resourceGroup().location
+param uniquePrefix string = uniqueString(resourceGroup().id)
+
 param sites_eizdf_func_name string = 'eizdf-func'
 param sites_eizdf_webapp_name string = 'eizdf-webapp'
 param components_eizdf_func_name string = 'eizdf-func'
@@ -58,7 +133,7 @@ resource actionGroups_eizdf_detector_name_resource 'microsoft.insights/actionGro
 
 resource components_eizdf_appins_name_resource 'microsoft.insights/components@2020-02-02' = {
   name: components_eizdf_appins_name
-  location: 'eastus2'
+  location: location
   kind: 'web'
   properties: {
     Application_Type: 'web'
@@ -72,7 +147,7 @@ resource components_eizdf_appins_name_resource 'microsoft.insights/components@20
 
 resource components_eizdf_func_name_resource 'microsoft.insights/components@2020-02-02' = {
   name: components_eizdf_func_name
-  location: 'eastus2'
+  location: location
   kind: 'web'
   properties: {
     Application_Type: 'web'
@@ -88,7 +163,7 @@ resource components_eizdf_func_name_resource 'microsoft.insights/components@2020
 
 resource networkSecurityGroups_eizdfvmNSG_name_resource 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
   name: networkSecurityGroups_eizdfvmNSG_name
-  location: 'eastus2'
+  location: location
   properties: {
     securityRules: [
       {
@@ -116,7 +191,7 @@ resource networkSecurityGroups_eizdfvmNSG_name_resource 'Microsoft.Network/netwo
 
 resource networkSecurityGroups_eizdf_vnet_subnet_Bastion_nsg_name_resource 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
   name: networkSecurityGroups_eizdf_vnet_subnet_Bastion_nsg_name
-  location: 'eastus2'
+  location: location
   tags: {
     Creator: 'Automatically added by CloudGov Azure Policy'
     'CloudGov-Info': 'http://aka.ms/cssbaselinesecurity'
@@ -134,7 +209,7 @@ resource privateDnsZones_privatelink_azurewebsites_net_name_resource 'Microsoft.
 
 resource publicIPAddresses_eizdf_function_public_ip_name_resource 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   name: publicIPAddresses_eizdf_function_public_ip_name
-  location: 'eastus2'
+  location: location
   sku: {
     name: 'Standard'
     tier: 'Regional'
@@ -158,7 +233,7 @@ resource publicIPAddresses_eizdf_function_public_ip_name_resource 'Microsoft.Net
 
 resource publicIPAddresses_eizdfvmPublicIP_name_resource 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   name: publicIPAddresses_eizdfvmPublicIP_name
-  location: 'eastus2'
+  location: location
   sku: {
     name: 'Standard'
     tier: 'Regional'
@@ -174,7 +249,7 @@ resource publicIPAddresses_eizdfvmPublicIP_name_resource 'Microsoft.Network/publ
 
 resource namespaces_eizdf_servicebus_name_resource 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
   name: namespaces_eizdf_servicebus_name
-  location: 'eastus2'
+  location: location
   sku: {
     name: 'Premium'
     tier: 'Premium'
@@ -191,7 +266,7 @@ resource namespaces_eizdf_servicebus_name_resource 'Microsoft.ServiceBus/namespa
 
 resource storageAccounts_aztblogsv12u2gzyv3w2zong_name_resource 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccounts_aztblogsv12u2gzyv3w2zong_name
-  location: 'eastus2'
+  location: location
   sku: {
     name: 'Standard_LRS'
     tier: 'Standard'
@@ -229,7 +304,7 @@ resource storageAccounts_aztblogsv12u2gzyv3w2zong_name_resource 'Microsoft.Stora
 
 resource storageAccounts_eizdffuncstg_name_resource 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccounts_eizdffuncstg_name
-  location: 'eastus2'
+  location: location
   sku: {
     name: 'Standard_LRS'
     tier: 'Standard'
@@ -265,7 +340,7 @@ resource storageAccounts_eizdffuncstg_name_resource 'Microsoft.Storage/storageAc
 
 resource serverfarms_eizdf_plan_func_name_resource 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: serverfarms_eizdf_plan_func_name
-  location: 'East US 2'
+  location: location
   sku: {
     name: 'P1v2'
     tier: 'PremiumV2'
@@ -290,7 +365,7 @@ resource serverfarms_eizdf_plan_func_name_resource 'Microsoft.Web/serverfarms@20
 
 resource serverfarms_eizdf_plan_webapp_name_resource 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: serverfarms_eizdf_plan_webapp_name
-  location: 'East US 2'
+  location: location
   sku: {
     name: 'B1'
     tier: 'Basic'
@@ -315,7 +390,7 @@ resource serverfarms_eizdf_plan_webapp_name_resource 'Microsoft.Web/serverfarms@
 
 resource serverfarms_kimwg_plan_webapp_name_resource 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: serverfarms_kimwg_plan_webapp_name
-  location: 'East US 2'
+  location: location
   sku: {
     name: 'B1'
     tier: 'Basic'
@@ -360,77 +435,11 @@ resource smartdetectoralertrules_failure_anomalies_eizdf_func_name_resource 'mic
   }
 }
 
-resource virtualMachines_eizdfvm_name_resource 'Microsoft.Compute/virtualMachines@2024-03-01' = {
-  name: virtualMachines_eizdfvm_name
-  location: 'eastus2'
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    hardwareProfile: {
-      vmSize: 'Standard_B4ms'
-    }
-    storageProfile: {
-      imageReference: {
-        publisher: 'MicrosoftWindowsServer'
-        offer: 'WindowsServer'
-        sku: '2022-datacenter-g2'
-        version: 'latest'
-      }
-      osDisk: {
-        osType: 'Windows'
-        name: '${virtualMachines_eizdfvm_name}_OsDisk_1_63cacf55b18a4be9a66b77905eec42f2'
-        createOption: 'FromImage'
-        caching: 'ReadWrite'
-        managedDisk: {
-          storageAccountType: 'Premium_LRS'
-          id: resourceId(
-            'Microsoft.Compute/disks',
-            '${virtualMachines_eizdfvm_name}_OsDisk_1_63cacf55b18a4be9a66b77905eec42f2'
-          )
-        }
-        deleteOption: 'Detach'
-        diskSizeGB: 127
-      }
-      dataDisks: []
-      diskControllerType: 'SCSI'
-    }
-    osProfile: {
-      computerName: virtualMachines_eizdfvm_name
-      adminUsername: 'azureuser'
-      windowsConfiguration: {
-        provisionVMAgent: true
-        enableAutomaticUpdates: true
-        patchSettings: {
-          patchMode: 'AutomaticByOS'
-          assessmentMode: 'ImageDefault'
-        }
-      }
-      secrets: []
-      allowExtensionOperations: true
-      requireGuestProvisionSignal: true
-    }
-    securityProfile: {
-      uefiSettings: {
-        secureBootEnabled: true
-        vTpmEnabled: true
-      }
-      securityType: 'TrustedLaunch'
-    }
-    networkProfile: {
-      networkInterfaces: [
-        {
-          id: networkInterfaces_eizdfvmVMNic_name_resource.id
-        }
-      ]
-    }
-  }
-}
 
 resource components_eizdf_appins_name_degradationindependencyduration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'degradationindependencyduration'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'degradationindependencyduration'
@@ -451,7 +460,7 @@ resource components_eizdf_appins_name_degradationindependencyduration 'microsoft
 resource components_eizdf_func_name_degradationindependencyduration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'degradationindependencyduration'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'degradationindependencyduration'
@@ -472,7 +481,7 @@ resource components_eizdf_func_name_degradationindependencyduration 'microsoft.i
 resource components_eizdf_appins_name_degradationinserverresponsetime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'degradationinserverresponsetime'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'degradationinserverresponsetime'
@@ -493,7 +502,7 @@ resource components_eizdf_appins_name_degradationinserverresponsetime 'microsoft
 resource components_eizdf_func_name_degradationinserverresponsetime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'degradationinserverresponsetime'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'degradationinserverresponsetime'
@@ -514,7 +523,7 @@ resource components_eizdf_func_name_degradationinserverresponsetime 'microsoft.i
 resource components_eizdf_appins_name_digestMailConfiguration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'digestMailConfiguration'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'digestMailConfiguration'
@@ -535,7 +544,7 @@ resource components_eizdf_appins_name_digestMailConfiguration 'microsoft.insight
 resource components_eizdf_func_name_digestMailConfiguration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'digestMailConfiguration'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'digestMailConfiguration'
@@ -556,7 +565,7 @@ resource components_eizdf_func_name_digestMailConfiguration 'microsoft.insights/
 resource components_eizdf_appins_name_extension_billingdatavolumedailyspikeextension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'extension_billingdatavolumedailyspikeextension'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_billingdatavolumedailyspikeextension'
@@ -577,7 +586,7 @@ resource components_eizdf_appins_name_extension_billingdatavolumedailyspikeexten
 resource components_eizdf_func_name_extension_billingdatavolumedailyspikeextension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'extension_billingdatavolumedailyspikeextension'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_billingdatavolumedailyspikeextension'
@@ -598,7 +607,7 @@ resource components_eizdf_func_name_extension_billingdatavolumedailyspikeextensi
 resource components_eizdf_appins_name_extension_canaryextension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'extension_canaryextension'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_canaryextension'
@@ -619,7 +628,7 @@ resource components_eizdf_appins_name_extension_canaryextension 'microsoft.insig
 resource components_eizdf_func_name_extension_canaryextension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'extension_canaryextension'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_canaryextension'
@@ -640,7 +649,7 @@ resource components_eizdf_func_name_extension_canaryextension 'microsoft.insight
 resource components_eizdf_appins_name_extension_exceptionchangeextension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'extension_exceptionchangeextension'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_exceptionchangeextension'
@@ -661,7 +670,7 @@ resource components_eizdf_appins_name_extension_exceptionchangeextension 'micros
 resource components_eizdf_func_name_extension_exceptionchangeextension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'extension_exceptionchangeextension'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_exceptionchangeextension'
@@ -682,7 +691,7 @@ resource components_eizdf_func_name_extension_exceptionchangeextension 'microsof
 resource components_eizdf_appins_name_extension_memoryleakextension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'extension_memoryleakextension'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_memoryleakextension'
@@ -703,7 +712,7 @@ resource components_eizdf_appins_name_extension_memoryleakextension 'microsoft.i
 resource components_eizdf_func_name_extension_memoryleakextension 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'extension_memoryleakextension'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_memoryleakextension'
@@ -724,7 +733,7 @@ resource components_eizdf_func_name_extension_memoryleakextension 'microsoft.ins
 resource components_eizdf_appins_name_extension_securityextensionspackage 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'extension_securityextensionspackage'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_securityextensionspackage'
@@ -745,7 +754,7 @@ resource components_eizdf_appins_name_extension_securityextensionspackage 'micro
 resource components_eizdf_func_name_extension_securityextensionspackage 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'extension_securityextensionspackage'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_securityextensionspackage'
@@ -766,7 +775,7 @@ resource components_eizdf_func_name_extension_securityextensionspackage 'microso
 resource components_eizdf_appins_name_extension_traceseveritydetector 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'extension_traceseveritydetector'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_traceseveritydetector'
@@ -787,7 +796,7 @@ resource components_eizdf_appins_name_extension_traceseveritydetector 'microsoft
 resource components_eizdf_func_name_extension_traceseveritydetector 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'extension_traceseveritydetector'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'extension_traceseveritydetector'
@@ -808,7 +817,7 @@ resource components_eizdf_func_name_extension_traceseveritydetector 'microsoft.i
 resource components_eizdf_appins_name_longdependencyduration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'longdependencyduration'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'longdependencyduration'
@@ -829,7 +838,7 @@ resource components_eizdf_appins_name_longdependencyduration 'microsoft.insights
 resource components_eizdf_func_name_longdependencyduration 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'longdependencyduration'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'longdependencyduration'
@@ -850,7 +859,7 @@ resource components_eizdf_func_name_longdependencyduration 'microsoft.insights/c
 resource components_eizdf_appins_name_migrationToAlertRulesCompleted 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'migrationToAlertRulesCompleted'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'migrationToAlertRulesCompleted'
@@ -871,7 +880,7 @@ resource components_eizdf_appins_name_migrationToAlertRulesCompleted 'microsoft.
 resource components_eizdf_func_name_migrationToAlertRulesCompleted 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'migrationToAlertRulesCompleted'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'migrationToAlertRulesCompleted'
@@ -892,7 +901,7 @@ resource components_eizdf_func_name_migrationToAlertRulesCompleted 'microsoft.in
 resource components_eizdf_appins_name_slowpageloadtime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'slowpageloadtime'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'slowpageloadtime'
@@ -913,7 +922,7 @@ resource components_eizdf_appins_name_slowpageloadtime 'microsoft.insights/compo
 resource components_eizdf_func_name_slowpageloadtime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'slowpageloadtime'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'slowpageloadtime'
@@ -934,7 +943,7 @@ resource components_eizdf_func_name_slowpageloadtime 'microsoft.insights/compone
 resource components_eizdf_appins_name_slowserverresponsetime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_appins_name_resource
   name: 'slowserverresponsetime'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'slowserverresponsetime'
@@ -955,7 +964,7 @@ resource components_eizdf_appins_name_slowserverresponsetime 'microsoft.insights
 resource components_eizdf_func_name_slowserverresponsetime 'microsoft.insights/components/ProactiveDetectionConfigs@2018-05-01-preview' = {
   parent: components_eizdf_func_name_resource
   name: 'slowserverresponsetime'
-  location: 'eastus2'
+  location: location
   properties: {
     RuleDefinitions: {
       Name: 'slowserverresponsetime'
@@ -989,9 +998,6 @@ resource networkSecurityGroups_eizdfvmNSG_name_rdp 'Microsoft.Network/networkSec
     sourceAddressPrefixes: []
     destinationAddressPrefixes: []
   }
-  dependsOn: [
-    networkSecurityGroups_eizdfvmNSG_name_resource
-  ]
 }
 
 resource privateDnsZones_privatelink_azurewebsites_net_name_eizdf_func 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
@@ -1077,7 +1083,7 @@ resource Microsoft_Network_privateDnsZones_SOA_privateDnsZones_privatelink_azure
 
 resource virtualNetworks_eizdf_vnet_name_resource 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: virtualNetworks_eizdf_vnet_name
-  location: 'eastus2'
+  location: location
   properties: {
     addressSpace: {
       addressPrefixes: [
@@ -1108,7 +1114,7 @@ resource virtualNetworks_eizdf_vnet_name_resource 'Microsoft.Network/virtualNetw
 resource namespaces_eizdf_servicebus_name_RootManageSharedAccessKey 'Microsoft.ServiceBus/namespaces/authorizationrules@2022-10-01-preview' = {
   parent: namespaces_eizdf_servicebus_name_resource
   name: 'RootManageSharedAccessKey'
-  location: 'eastus2'
+  location: location
   properties: {
     rights: [
       'Listen'
@@ -1121,7 +1127,7 @@ resource namespaces_eizdf_servicebus_name_RootManageSharedAccessKey 'Microsoft.S
 resource namespaces_eizdf_servicebus_name_default 'Microsoft.ServiceBus/namespaces/networkrulesets@2022-10-01-preview' = {
   parent: namespaces_eizdf_servicebus_name_resource
   name: 'default'
-  location: 'eastus2'
+  location: location
   properties: {
     publicNetworkAccess: 'Enabled'
     defaultAction: 'Allow'
@@ -1259,7 +1265,7 @@ resource namespaces_eizdf_servicebus_name_default 'Microsoft.ServiceBus/namespac
 resource namespaces_eizdf_servicebus_name_mainqueue001 'Microsoft.ServiceBus/namespaces/queues@2022-10-01-preview' = {
   parent: namespaces_eizdf_servicebus_name_resource
   name: 'mainqueue001'
-  location: 'eastus2'
+  location: location
   properties: {
     maxMessageSizeInKilobytes: 1024
     lockDuration: 'PT1M'
@@ -1398,7 +1404,7 @@ resource Microsoft_Storage_storageAccounts_tableServices_storageAccounts_eizdffu
 
 resource sites_eizdf_func_name_resource 'Microsoft.Web/sites@2023-12-01' = {
   name: sites_eizdf_func_name
-  location: 'East US 2'
+  location: location
   tags: {
     'hidden-link: /app-insights-resource-id': '/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/microsoft.insights/components/eizdf-func'
     'hidden-link: /app-insights-instrumentation-key': '363f69b1-1e17-4f18-afe3-df8ab46f68f4'
@@ -1456,7 +1462,7 @@ resource sites_eizdf_func_name_resource 'Microsoft.Web/sites@2023-12-01' = {
 
 resource sites_eizdf_webapp_name_resource 'Microsoft.Web/sites@2023-12-01' = {
   name: sites_eizdf_webapp_name
-  location: 'East US 2'
+  location: location
   kind: 'app'
   properties: {
     enabled: true
@@ -1507,7 +1513,7 @@ resource sites_eizdf_webapp_name_resource 'Microsoft.Web/sites@2023-12-01' = {
 resource sites_eizdf_func_name_ftp 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: 'ftp'
-  location: 'East US 2'
+  location: location
   tags: {
     'hidden-link: /app-insights-resource-id': '/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/microsoft.insights/components/eizdf-func'
     'hidden-link: /app-insights-instrumentation-key': '363f69b1-1e17-4f18-afe3-df8ab46f68f4'
@@ -1521,7 +1527,7 @@ resource sites_eizdf_func_name_ftp 'Microsoft.Web/sites/basicPublishingCredentia
 resource sites_eizdf_webapp_name_ftp 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
   parent: sites_eizdf_webapp_name_resource
   name: 'ftp'
-  location: 'East US 2'
+  location: location
   properties: {
     allow: false
   }
@@ -1530,7 +1536,7 @@ resource sites_eizdf_webapp_name_ftp 'Microsoft.Web/sites/basicPublishingCredent
 resource sites_eizdf_func_name_scm 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: 'scm'
-  location: 'East US 2'
+  location: location
   tags: {
     'hidden-link: /app-insights-resource-id': '/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/microsoft.insights/components/eizdf-func'
     'hidden-link: /app-insights-instrumentation-key': '363f69b1-1e17-4f18-afe3-df8ab46f68f4'
@@ -1544,7 +1550,7 @@ resource sites_eizdf_func_name_scm 'Microsoft.Web/sites/basicPublishingCredentia
 resource sites_eizdf_webapp_name_scm 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
   parent: sites_eizdf_webapp_name_resource
   name: 'scm'
-  location: 'East US 2'
+  location: location
   properties: {
     allow: false
   }
@@ -1553,7 +1559,7 @@ resource sites_eizdf_webapp_name_scm 'Microsoft.Web/sites/basicPublishingCredent
 resource sites_eizdf_func_name_web 'Microsoft.Web/sites/config@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: 'web'
-  location: 'East US 2'
+  location: location
   tags: {
     'hidden-link: /app-insights-resource-id': '/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/microsoft.insights/components/eizdf-func'
     'hidden-link: /app-insights-instrumentation-key': '363f69b1-1e17-4f18-afe3-df8ab46f68f4'
@@ -1643,7 +1649,7 @@ resource sites_eizdf_func_name_web 'Microsoft.Web/sites/config@2023-12-01' = {
 resource sites_eizdf_webapp_name_web 'Microsoft.Web/sites/config@2023-12-01' = {
   parent: sites_eizdf_webapp_name_resource
   name: 'web'
-  location: 'East US 2'
+  location: location
   properties: {
     numberOfWorkers: 1
     defaultDocuments: [
@@ -1721,7 +1727,7 @@ resource sites_eizdf_webapp_name_web 'Microsoft.Web/sites/config@2023-12-01' = {
 resource sites_eizdf_func_name_2eedc00a943c4d6f887f289f8ab20a8b 'Microsoft.Web/sites/deployments@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: '2eedc00a943c4d6f887f289f8ab20a8b'
-  location: 'East US 2'
+  location: location
   properties: {
     status: 4
     author_email: 'N/A'
@@ -1737,7 +1743,7 @@ resource sites_eizdf_func_name_2eedc00a943c4d6f887f289f8ab20a8b 'Microsoft.Web/s
 resource sites_eizdf_func_name_7d593099a23f453da550ba60ad1f77f7 'Microsoft.Web/sites/deployments@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: '7d593099a23f453da550ba60ad1f77f7'
-  location: 'East US 2'
+  location: location
   properties: {
     status: 4
     author_email: 'N/A'
@@ -1753,7 +1759,7 @@ resource sites_eizdf_func_name_7d593099a23f453da550ba60ad1f77f7 'Microsoft.Web/s
 resource sites_eizdf_func_name_f2d15d928ef2440287d45d8235eec7a7 'Microsoft.Web/sites/deployments@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: 'f2d15d928ef2440287d45d8235eec7a7'
-  location: 'East US 2'
+  location: location
   properties: {
     status: 4
     author_email: 'N/A'
@@ -1769,7 +1775,7 @@ resource sites_eizdf_func_name_f2d15d928ef2440287d45d8235eec7a7 'Microsoft.Web/s
 resource sites_eizdf_func_name_SimpleServiceBusReceiver 'Microsoft.Web/sites/functions@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: 'SimpleServiceBusReceiver'
-  location: 'East US 2'
+  location: location
   properties: {
     script_href: 'https://eizdf-func.azurewebsites.net/admin/vfs/site/wwwroot/SimpleServiceBusSendReceiveAzureFuncs.dll'
     test_data_href: 'https://eizdf-func.azurewebsites.net/admin/vfs/data/Functions/sampledata/SimpleServiceBusReceiver.dat'
@@ -1801,7 +1807,7 @@ resource sites_eizdf_func_name_SimpleServiceBusReceiver 'Microsoft.Web/sites/fun
 resource sites_eizdf_func_name_sites_eizdf_func_name_azurewebsites_net 'Microsoft.Web/sites/hostNameBindings@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: '${sites_eizdf_func_name}.azurewebsites.net'
-  location: 'East US 2'
+  location: location
   properties: {
     siteName: 'eizdf-func'
     hostNameType: 'Verified'
@@ -1811,7 +1817,7 @@ resource sites_eizdf_func_name_sites_eizdf_func_name_azurewebsites_net 'Microsof
 resource sites_eizdf_webapp_name_sites_eizdf_webapp_name_azurewebsites_net 'Microsoft.Web/sites/hostNameBindings@2023-12-01' = {
   parent: sites_eizdf_webapp_name_resource
   name: '${sites_eizdf_webapp_name}.azurewebsites.net'
-  location: 'East US 2'
+  location: location
   properties: {
     siteName: 'eizdf-webapp'
     hostNameType: 'Verified'
@@ -1821,7 +1827,7 @@ resource sites_eizdf_webapp_name_sites_eizdf_webapp_name_azurewebsites_net 'Micr
 resource sites_eizdf_func_name_eizdf_peconn_59be4e51_f3bd_4f77_8ea7_8fe05f58be2e 'Microsoft.Web/sites/privateEndpointConnections@2023-12-01' = {
   parent: sites_eizdf_func_name_resource
   name: 'eizdf-peconn-59be4e51-f3bd-4f77-8ea7-8fe05f58be2e'
-  location: 'East US 2'
+  location: location
   properties: {
     privateEndpoint: {}
     privateLinkServiceConnectionState: {
@@ -1837,7 +1843,7 @@ resource sites_eizdf_func_name_eizdf_peconn_59be4e51_f3bd_4f77_8ea7_8fe05f58be2e
 resource sites_eizdf_webapp_name_eizdf_peconn_df21ce2f_e3b5_4981_a3cc_bb69b7a0597b 'Microsoft.Web/sites/privateEndpointConnections@2023-12-01' = {
   parent: sites_eizdf_webapp_name_resource
   name: 'eizdf-peconn-df21ce2f-e3b5-4981-a3cc-bb69b7a0597b'
-  location: 'East US 2'
+  location: location
   properties: {
     privateEndpoint: {}
     privateLinkServiceConnectionState: {
@@ -1886,7 +1892,7 @@ resource privateDnsZones_privatelink_azurewebsites_net_name_dns_link 'Microsoft.
 
 resource privateEndpoints_eizdf_func_private_end_point_name_resource 'Microsoft.Network/privateEndpoints@2023-11-01' = {
   name: privateEndpoints_eizdf_func_private_end_point_name
-  location: 'eastus2'
+  location: location
   properties: {
     privateLinkServiceConnections: [
       {
@@ -1915,7 +1921,7 @@ resource privateEndpoints_eizdf_func_private_end_point_name_resource 'Microsoft.
 
 resource privateEndpoints_eizdf_web_private_end_point_name_resource 'Microsoft.Network/privateEndpoints@2023-11-01' = {
   name: privateEndpoints_eizdf_web_private_end_point_name
-  location: 'eastus2'
+  location: location
   properties: {
     privateLinkServiceConnections: [
       {
@@ -2116,7 +2122,7 @@ resource storageAccounts_eizdffuncstg_name_default_iqa5jvm_func7198c0b0a43b 'Mic
 
 resource networkInterfaces_eizdfvmVMNic_name_resource 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   name: networkInterfaces_eizdfvmVMNic_name
-  location: 'eastus2'
+  location: location
   kind: 'Regular'
   properties: {
     ipConfigurations: [

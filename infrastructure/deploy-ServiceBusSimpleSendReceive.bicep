@@ -1287,6 +1287,10 @@ resource functionAppConfig 'Microsoft.Web/sites/config@2023-12-01' = {
   }
 }
 
+
+
+
+
 module assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noManagedIdent) {
   name: 'assign-role-to-functionApp'
   params: {
@@ -1313,109 +1317,3 @@ module assignRoleToFunctionAppForKV 'assignRbacRoleToFunctionAppForKVAccess.bice
     functionPrincipalId: functionApp.identity.principalId
   }
 }
-// Thu Jun 27 09:57 2024
-//  step 15 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported.
-//  az functionapp deployment source config-zip -g rg_SBusSndRcv -n iqa5jvm-func --src ./publish-functionapp.zip
-//  WARNING: Invalid version:  for runtime dotnet-isolated and os windows. Supported versions for runtime dotnet-isolated and os windows are: ['8', '7', '6', '.4.8']. Run 'az functionapp list-runtimes' for more details on supported runtimes. 
-//  WARNING: Getting scm site credentials for zip deployment
-//  WARNING: Starting zip deployment. This operation can take a while to complete ...
-//  WARNING: Deployment endpoint responded with status code 202
-//  WARNING: Configuring default logging for the app, if not already enabled
-//  ERROR: Zip deployment failed. {'id': 'temp-a38cdb3b', 'status': 3, 'status_text': '', 'author_email': 'N/A', 'author': 'N/A', 'deployer': 'az_cli_functions', 'message': 'Deploying from pushed zip file', 'progress': '', 'received_time': '2024-06-27T16:55:46.1677403Z', 'start_time': '2024-06-27T16:55:46.1677403Z', 'end_time': '2024-06-27T16:55:50.340319Z', 'last_success_end_time': None, 'complete': True, 'active': False, 'is_temp': True, 'is_readonly': False, 'url': 'https://iqa5jvm-func.scm.azurewebsites.net/api/deployments/latest', 'log_url': 'https://iqa5jvm-func.scm.azurewebsites.net/api/deployments/latest/log', 'site_name': 'iqa5jvm-func', 'provisioningState': 'Failed'}. Please run the command az webapp log deployment show -n iqa5jvm-func -g rg_SBusSndRcv
-//  Name                       Flavor       ResourceType                                        Region
-//  -------------------------  -----------  --------------------------------------------------  --------
-//  iqa5jvm-appins             web          Microsoft.Insights/components                       westus2
-//  iqa5jvm-servicebus                      Microsoft.ServiceBus/namespaces                     westus2
-//  iqa5jvmfuncstg             StorageV2    Microsoft.Storage/storageAccounts                   westus2
-//  iqa5jvm-detector                        Microsoft.Insights/actiongroups                     global
-//  iqa5jvm-plan-func          functionapp  Microsoft.Web/serverFarms                           westus2
-//  iqa5jvm-failure anomalies               microsoft.alertsManagement/smartDetectorAlertRules  global
-//  iqa5jvm-func               functionapp  Microsoft.Web/sites                                 westus2
-//  fvtlr-webapp-helloworld    app          Microsoft.Web/sites                                 westus2
-//  all done 06/27/2024 09:55:54 elapse time = 00:00:30 
-//  
-//  Process compilation finished
-//  
-
-
-// Thu Jun 27 06:21 2024 This error was not reproducable. On the second try everything was fine.
-//  ERROR: {
-//    "status": "Failed",
-//    "error": {
-//      "code": "DeploymentFailed",
-//      "target": "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/rg_SBusSndRcv/providers/Microsoft.Resources/deployments/SBusSndRcv",
-//      "message": "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.",
-//      "details": [
-//        {
-//          "code": "ResourceNotFound",
-//          "message": "The specified resource does not exist.\nRequestId:0384f4d0-a01a-000d-6592-c89fd6000000\nTime:2024-06-27T13:05:24.0831234Z"
-//        },
-//        {
-//          "code": "ResourceNotFound",
-//          "message": "The specified resource does not exist.\nRequestId:33a978e0-f003-003f-4d92-c89fa1000000\nTime:2024-06-27T13:05:22.0964885Z"
-//        },
-//        {
-//          "code": "InternalSrpError",
-//          "message": "Unknown error returned by stamp <?xml version=\"1.0\" encoding=\"utf-8\"?><m:error xmlns:m=\"http://schemas.microsoft.com/ado/2007/08/dataservices/metadata\"><m:code>ResourceNotFound</m:code><m:message xml:lang=\"en-US\">The specified resource does not exist.\nRequestId:990cd93b-9002-0039-1392-c8ac1e000000\nTime:2024-06-27T13:05:22.0754081Z</m:message></m:error>"
-//        },
-//        {
-//          "code": "ContainerOperationFailure",
-//          "message": "The specified resource does not exist.\nRequestId:621c0bd0-001e-003b-4d92-c812a6000000\nTime:2024-06-27T13:05:22.0486414Z"
-//        }
-//      ]
-//    }
-//  }
-//  
-
-//  Resource
-//  /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_SBusSndRcv/providers/Microsoft.Storage/storageAccounts/iqa5jvmfuncstg/blobServices/default
-//  Operation name
-//  Put blob service properties
-//  Time stamp
-//  Thu Jun 27 2024 06:05:22 GMT-0700 (Pacific Daylight Time)
-//  Event initiated by
-//  sheintze@hotmail.com
-//  Error code
-//  ContainerOperationFailure
-//  Message
-//  The specified resource does not exist. RequestId:621c0bd0-001e-003b-4d92-c812a6000000 Time:2024-06-27T13:05:22.0486414Z
-//  
-//  Resource
-//  /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_SBusSndRcv/providers/Microsoft.Storage/storageAccounts/iqa5jvmfuncstg/tableServices/default
-//  Operation name
-//  Set table service properties
-//  Time stamp
-//  Thu Jun 27 2024 06:05:22 GMT-0700 (Pacific Daylight Time)
-//  Event initiated by
-//  sheintze@hotmail.com
-//  Error code
-//  InternalSrpError
-//  Message
-//  Unknown error returned by stamp <?xml version="1.0" encoding="utf-8"?><m:error xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"><m:code>ResourceNotFound</m:code><m:message xml:lang="en-US">The specified resource does not exist. RequestId:990cd93b-9002-0039-1392-c8ac1e000000 Time:2024-06-27T13:05:22.0754081Z</m:message></m:error>
-//  
-//  Resource
-//  /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_SBusSndRcv/providers/Microsoft.Storage/storageAccounts/iqa5jvmfuncstg/queueServices/default
-//  Operation name
-//  Set queue service properties
-//  Time stamp
-//  Thu Jun 27 2024 06:05:22 GMT-0700 (Pacific Daylight Time)
-//  Event initiated by
-//  sheintze@hotmail.com
-//  Error code
-//  ResourceNotFound
-//  Message
-//  The specified resource does not exist. RequestId:33a978e0-f003-003f-4d92-c89fa1000000 Time:2024-06-27T13:05:22.0964885Z
-//  
-//  
-//  Resource
-//  /subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourcegroups/rg_SBusSndRcv/providers/Microsoft.Storage/storageAccounts/iqa5jvmfuncstg/fileServices/default
-//  Operation name
-//  Put File Service Properties
-//  Time stamp
-//  Thu Jun 27 2024 06:05:24 GMT-0700 (Pacific Daylight Time)
-//  Event initiated by
-//  sheintze@hotmail.com
-//  Error code
-//  ResourceNotFound
-//  Message
-//  The specified resource does not exist. RequestId:0384f4d0-a01a-000d-6592-c89fd6000000 Time:2024-06-27T13:05:24.0831234Z
