@@ -10,13 +10,15 @@ EOF
    $StartTime = $(get-date)
    $env:name=If ($env:USERNAME -eq "shein") { "AppServicePrivateEndPoint" } Else { "AppServicePrivateEndPoint_$($env:USERNAME)" }
    $env:rg="rg_$($env:name)"
+   $createWebSite=[bool]1
    $env:location=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"qaolr"} ElseIf ($env:USERNAME -eq "v-paperry") { "hqoga" } ElseIf ($env:USERNAME -eq "hein") {"wdfso"} Else { "lbaxn" } )"
    End common prolog commands
 
    emacs F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental --template-file  "AppServicePrivateEndPoint.bicep" --parameters "{'uniquePrefix': {'value': '$env:uniquePrefix'}}" "{'location': {'value': '$env:location'}}" | ForEach-Object { $_ -replace "`r", ""}
+   write-output "az deployment group create --name $env:name --resource-group $env:rg --mode Incremental --template-file  `"AppServicePrivateEndPoint.bicep`" --parameters `"{'uniquePrefix': {'value': '$env:uniquePrefix'}}`" `"{'location': {'value': '$env:location'}}`" `"{'createWebSite' : {'value': $createWebSite}}`" "
+   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental --template-file  "AppServicePrivateEndPoint.bicep" --parameters "{'uniquePrefix': {'value': '$env:uniquePrefix'}}" "{'location': {'value': '$env:location'}}" "{'createWebSite' : {'value': $createWebSite}}" | ForEach-Object { $_ -replace "`r", ""}
    write-output "end deploy $(Get-Date)"
    End commands to deploy this file using Azure CLI with PowerShell
 
@@ -42,6 +44,14 @@ EOF
    $env:id=(az group show --name $env:rg --query 'id' --output tsv)
    write-output "id=$env:id"
    write-output "{`n`"`$schema`": `"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#`",`n `"contentVersion`": `"1.0.0.0`",`n `"resources`": [] `n}" | Out-File -FilePath clear-resources.json
+   End commands for one time initializations using Azure CLI with PowerShell
+
+   emacs ESC 5 F10
+   Begin commands for one time initializations using Azure CLI with PowerShell
+   write-output "Step 5 Deploy VNET and private links"
+   $createWebSite=[bool]0
+   write-output "az deployment group create --name $env:name --resource-group $env:rg --mode Incremental --template-file  `"AppServicePrivateEndPoint.bicep`" --parameters `"{'uniquePrefix': {'value': '$env:uniquePrefix'}}`" `"{'location': {'value': '$env:location'}}`" `"{'createWebSite' : {'value': $createWebSite}}`""
+   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental --template-file  "AppServicePrivateEndPoint.bicep" --parameters "{'uniquePrefix': {'value': '$env:uniquePrefix'}}" "{'location': {'value': '$env:location'}}" "{'createWebSite' : {'value': $createWebSite}}" | ForEach-Object { $_ -replace "`r", ""}
    End commands for one time initializations using Azure CLI with PowerShell
 
    Begin common epilog commands
@@ -100,7 +110,9 @@ param privateDNSZone_name string = 'privatelink.azurewebsites.net'
 @description('Name must be privatelink.azurewebsites.net')
 param webapp_dns_name string = '.azurewebsites.net'
 
-resource virtualNetwork_name_resource 'Microsoft.Network/virtualNetworks@2020-04-01' = {
+param createWebSite bool = false
+
+resource virtualNetwork_name_resource 'Microsoft.Network/virtualNetworks@2020-04-01' = if(!createWebSite) {
   name: virtualNetwork_name
   location: location
   properties: {
@@ -112,7 +124,7 @@ resource virtualNetwork_name_resource 'Microsoft.Network/virtualNetworks@2020-04
   }
 }
 
-resource virtualNetwork_name_subnet1_name 'Microsoft.Network/virtualNetworks/subnets@2020-04-01' = {
+resource virtualNetwork_name_subnet1_name 'Microsoft.Network/virtualNetworks/subnets@2020-04-01' = if(!createWebSite) {
   parent: virtualNetwork_name_resource
   name: subnet1_name
   properties: {
@@ -121,7 +133,7 @@ resource virtualNetwork_name_subnet1_name 'Microsoft.Network/virtualNetworks/sub
   }
 }
 
-resource serverFarm_name_resource 'Microsoft.Web/serverfarms@2019-08-01' = {
+resource serverFarm_name_resource 'Microsoft.Web/serverfarms@2019-08-01' = if(createWebSite){
   name: serverFarm_name
   location: location
   sku: {
@@ -134,7 +146,7 @@ resource serverFarm_name_resource 'Microsoft.Web/serverfarms@2019-08-01' = {
   kind: 'app'
 }
 
-resource site_name_resource 'Microsoft.Web/sites@2019-08-01' = {
+resource site_name_resource 'Microsoft.Web/sites@2019-08-01' = if(createWebSite) {
   name: site_name
   location: location
   kind: 'app'
@@ -154,28 +166,27 @@ resource site_name_resource 'Microsoft.Web/sites@2019-08-01' = {
     ]
     serverFarmId: serverFarm_name_resource.id
   }
-}
-
-resource site_name_web 'Microsoft.Web/sites/config@2019-08-01' = {
-  parent: site_name_resource
-  name: 'web'
-  location: location
-  properties: {
-    ftpsState: 'AllAllowed'
+  resource site_name_web 'config@2019-08-01' = {   
+    name: 'web'
+    properties: {
+      ftpsState: 'AllAllowed'
+    }
+  }
+  resource site_name_site_name_webapp_dns_name 'hostNameBindings@2019-08-01' = {
+    name: '${site_name}${webapp_dns_name}'
+    properties: {
+      siteName: site_name
+      hostNameType: 'Verified'
+    }
   }
 }
 
-resource site_name_site_name_webapp_dns_name 'Microsoft.Web/sites/hostNameBindings@2019-08-01' = {
-  parent: site_name_resource
-  name: '${site_name}${webapp_dns_name}'
-  location: location
-  properties: {
-    siteName: site_name
-    hostNameType: 'Verified'
-  }
+
+resource site_name_resource_existing 'Microsoft.Web/sites@2019-08-01' existing= if(!createWebSite) {
+  name: site_name
 }
 
-resource privateEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-04-01' = {
+resource privateEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-04-01' = if(!createWebSite) {
   name: privateEndpoint_name
   location: location
   properties: {
@@ -186,7 +197,7 @@ resource privateEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-
       {
         name: privateLinkConnection_name
         properties: {
-          privateLinkServiceId: site_name_resource.id
+          privateLinkServiceId: site_name_resource_existing.id
           groupIds: [
             'sites'
           ]
@@ -196,7 +207,7 @@ resource privateEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-
   }
 }
 
-resource privateDNSZone_name_resource 'Microsoft.Network/privateDnsZones@2018-09-01' = {
+resource privateDNSZone_name_resource 'Microsoft.Network/privateDnsZones@2018-09-01' = if(!createWebSite) {
   name: privateDNSZone_name
   location: 'global'
   dependsOn: [
@@ -204,7 +215,7 @@ resource privateDNSZone_name_resource 'Microsoft.Network/privateDnsZones@2018-09
   ]
 }
 
-resource privateDNSZone_name_privateDNSZone_name_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2018-09-01' = {
+resource privateDNSZone_name_privateDNSZone_name_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2018-09-01' = if(!createWebSite) {
   parent: privateDNSZone_name_resource
   name: '${privateDNSZone_name}-link'
   location: 'global'
@@ -216,10 +227,9 @@ resource privateDNSZone_name_privateDNSZone_name_link 'Microsoft.Network/private
   }
 }
 
-resource privateEndpoint_name_dnsgroupname 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2020-03-01' = {
+resource privateEndpoint_name_dnsgroupname 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2020-03-01' = if(!createWebSite) {
   parent: privateEndpoint_name_resource
   name: 'dnsgroupname'
-  location: location
   properties: {
     privateDnsZoneConfigs: [
       {
