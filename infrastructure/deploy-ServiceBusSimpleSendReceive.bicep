@@ -1359,6 +1359,17 @@ param privateLinkConnection_name string = 'privateLink'
 param privateDNSZone_name string = 'privatelink.azurewebsites.net'
 param webapp_dns_name string = '.azurewebsites.net'
 
+resource virtualNetwork_name_resource 'Microsoft.Network/virtualNetworks@2020-04-01' = if(createVNetForPEP) {
+  name: virtualNetwork_name
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        virtualNetwork_CIDR
+      ]
+    }
+  }
+}
 
 resource virtualNetwork_name_subnet1_name 'Microsoft.Network/virtualNetworks/subnets@2020-04-01' = if(createVNetForPEP) {
   parent: virtualNetwork_name_resource
