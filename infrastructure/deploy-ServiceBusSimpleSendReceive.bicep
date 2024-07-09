@@ -6,25 +6,26 @@
 EOF
 
    Begin common prolog commands
-   $env:subscriptionId=(az account show --query id --output tsv | ForEach-Object { $_ -replace "`r", ""})
-   If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv_$($env:USERNAME)" }
+   If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv002_$($env:USERNAME)" }
    $env:rg="rg_$($env:name)"
    $env:loc=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
-   $env:sp="spad_$env:name"
-   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"eizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
+   $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"xizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
    $env:serviceBusQueueName = 'mainqueue001'
+   $useServiceBusFireWall=[bool]0
    $noManagedIdent=[bool]1
    $useSourceControlLoadTestCode=If ($env:USERNAME -eq "shein") { [bool]1 } Else { [bool]0 }
-   $useServiceBusFireWall=[bool]1
    $useKVForStgConnectionString=[bool]0
-   $env:myIPAddress="172.56.107.204"
-   $usePremiumServiceBusFunctionApp=[bool]1
+   $createVNetForPEP=[bool]0
+   $createWebAppTestPEP=[bool]1
+   $env:myIPAddress="172.56.105.149"
+   $usePremiumServiceBusFunctionApp=[bool]0
    If ( $usePremiumServiceBusFunctionApp ) {
      $env:functionAppSku='P1V2'
      $env:serviceBusSku='Premium'
    } Else {
      $env:functionAppSku='Y1'
      $env:serviceBusSku='Basic'
+     $useServiceBusFireWall=[bool]0
    }
    $env:storageAccountName="$($env:uniquePrefix)funcstg"
    $env:functionAppName="$($env:uniquePrefix)-func"
@@ -36,18 +37,21 @@ EOF
 
    emacs F10
    Begin commands to deploy this file using Azure CLI with PowerShell
+   $createVNetForPEP=[bool]0
+   write-output "Phase 1 deployment: Function App, WebApp (verification only), Storage Accounts and no VNet and no PEP"
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters                                                                            `
-     "{'uniquePrefix': {'value': '$env:uniquePrefix'}}"                                      `
-     "{'location': {'value': '$env:loc'}}"                                                   `
-     "{'ownerId': {'value': '$env:AZURE_OBJECTID'}}"                                         `
+     "{'uniquePrefix'                   : {'value': '$env:uniquePrefix'}}"                   `
+     "{'location'                       : {'value': '$env:loc'}}"                            `
      "{'myIPAddress'                    : {'value': '$env:myIPAddress'}}"                    `
      "{'noManagedIdent'                 : {'value': $noManagedIdent}}"                       `
      "{'functionAppSku'                 : {'value': '$env:functionAppSku'}}"                 `
      "{'serviceBusSku'                  : {'value': '$env:serviceBusSku'}}"                  `
      "{'usePremiumServiceBusFunctionApp': {'value': $usePremiumServiceBusFunctionApp}}"      `
      "{'useServiceBusFireWall'          : {'value': $useServiceBusFireWall}}"                `
+     "{'createVNetForPEP'               : {'value': $createVNetForPEP}}"                     `
+     "{'createWebAppTestPEP'            : {'value': $createWebAppTestPEP}}"                  `
      "{'useKVForStgConnectionString'    : {'value': $useKVForStgConnectionString}}"          `
      "{'useSourceControlLoadTestCode'   : {'value': $useSourceControlLoadTestCode}}"         `
      "{'storageAccountName'             : {'value': '$env:storageAccountName'}}"             `
@@ -93,6 +97,8 @@ EOF
    #az ad sp delete --id $env:spId
    write-output "az group delete -n $env:rg"
    az group delete -n $env:rg --yes
+   write-output "az group delete -n $env:rg_old"
+   az group delete -n $env:rg_old --yes
    write-output "shutdown is complete $env:rg $(Get-Date)"
    End commands to shut down this deployment using Azure CLI with PowerShell
 
@@ -103,52 +109,85 @@ EOF
    az group create -l $env:loc -n $env:rg
    $env:id=(az group show --name $env:rg --query 'id' --output tsv)
    write-output "id=$env:id"
-   write-output "Skip creating the service principal for github workflow"
+   #write-output "Skip creating the service principal for github workflow"
    #write-output "az ad sp create-for-rbac --name $env:sp --json-auth --role contributor --scopes $env:id"
    #az ad sp create-for-rbac --name $env:sp --json-auth --role contributor --scopes $env:id
    #write-output "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
    write-output "{`n`"`$schema`": `"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#`",`n `"contentVersion`": `"1.0.0.0`",`n `"resources`": [] `n}" | Out-File -FilePath clear-resources.json
    End commands for one time initializations using Azure CLI with PowerShell
 
+
    emacs ESC 5 F10
+   Begin commands to deploy this file using Azure CLI with PowerShell
+   $createVNetForPEP=[bool]1
+   write-output "Phase 1 deployment: VNet, PEP for existing Webapp and Functionapp"
+   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
+     --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
+     --parameters                                                                            `
+     "{'uniquePrefix'                   : {'value': '$env:uniquePrefix'}}"                   `
+     "{'location'                       : {'value': '$env:loc'}}"                            `
+     "{'myIPAddress'                    : {'value': '$env:myIPAddress'}}"                    `
+     "{'noManagedIdent'                 : {'value': $noManagedIdent}}"                       `
+     "{'functionAppSku'                 : {'value': '$env:functionAppSku'}}"                 `
+     "{'serviceBusSku'                  : {'value': '$env:serviceBusSku'}}"                  `
+     "{'usePremiumServiceBusFunctionApp': {'value': $usePremiumServiceBusFunctionApp}}"      `
+     "{'useServiceBusFireWall'          : {'value': $useServiceBusFireWall}}"                `
+     "{'createVNetForPEP'               : {'value': $createVNetForPEP}}"                     `
+     "{'createWebAppTestPEP'            : {'value': $createWebAppTestPEP}}"                  `
+     "{'useKVForStgConnectionString'    : {'value': $useKVForStgConnectionString}}"          `
+     "{'useSourceControlLoadTestCode'   : {'value': $useSourceControlLoadTestCode}}"         `
+     "{'storageAccountName'             : {'value': '$env:storageAccountName'}}"             `
+     "{'functionAppName'                : {'value': '$env:functionAppName'}}"                `
+     "{'functionPlanName'               : {'value': '$env:funcPlanName'}}"                   `
+     "{'serviceBusNS'                   : {'value': '$env:serviceBusNS'}}"                   `
+     "{'serviceBusQueueName'            : {'value': '$env:serviceBusQueueName'}}"            `
+     "{'logAnalyticsWS'                 : {'value': '$env:logAnalyticsWS'}}"                 `
+   | ForEach-Object { $_ -replace "`r", ""}
+   write-output "end deploy $(Get-Date)"
+   End commands to deploy this file using Azure CLI with PowerShell
+
+   Message: The scope '/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourcegroups/rg_SBusSndRcv_v-richardsi' cannot perform delete operation because following scope(s) are locked: '/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourcegroups/rg_sbussndrcv_v-richardsi/providers/microsoft.storage/storageAccounts/eizdffuncstg'. Please remove the lock and try again.
+   emacs ESC 6 F10
    Begin commands for one time initializations using Azure CLI with PowerShell
+   write-output "old resource group = $($env:rg_old)"
+   az resource list -g $env:rg_old --query "[?resourceGroup=='$env:rg_old'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table  | ForEach-Object { $_ -replace "`r", ""}
    write-output "current resource list"
    End commands for one time initializations using Azure CLI with PowerShell
 
-   emacs ESC 6 F10
+   emacs ESC 7 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 6 Create Storage Account for Function App"
+   write-output "step 7 Create Storage Account for Function App"
    write-output "az storage account create --name $env:storageAccountName  --resource-group $env:rg --location $env:loc --sku Standard_LRS --access-tier Cool"
    az storage account create --name $env:storageAccountName  --resource-group $env:rg --location $env:loc --sku Standard_LRS --access-tier Cool
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 7 F10
+   emacs ESC 8 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 7 Show Connection strings for storage Storage Account for Function App"
+   write-output "step 8 Show Connection strings for storage Storage Account for Function App"
    write-output "az storage account show-connection-string --resource-group $env:rg --name $env:storageAccountName --output TSV"
    az storage account show-connection-string --resource-group $env:rg --name $env:storageAccountName --output TSV
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 8 F10
+   emacs ESC 9 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 8 Create Windows Function App"
+   write-output "step 9 Create Windows Function App"
    write-output "az functionapp create --resource-group $env:rg --consumption-plan-location $env:loc --runtime dotnet-isolated --runtime-version 8 --functions-version 4 --name $env:functionAppName --storage-account $env:storageAccountName"
    az functionapp create --resource-group $env:rg --consumption-plan-location $env:loc --runtime dotnet-isolated --runtime-version 8 --functions-version 4 --name $env:functionAppName --storage-account $env:storageAccountName
    az functionapp config appsettings list -n $env:functionAppName -g $env:rg
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 9 F10
+   emacs ESC 10 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 9 create service bus "
+   write-output "step 10 create service bus "
    write-output "az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Basic"
    az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Basic
    write-output "az servicebus queue create --resource-group $env:rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueueName"
    az servicebus queue create --resource-group $env:rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueueName
    End commands to deploy this file using Azure CLI with PowerShell
    
-   emacs ESC 10 F10
+   emacs ESC 11 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "Step 10 Set the Environment Variables"
+   write-output "Step 11 Set the Environment Variables"
    write-output "az servicebus namespace authorization-rule keys list --resource-group $env:rg --namespace-name $env:serviceBusNS --name RootManageSharedAccessKey --query primaryConnectionString --output tsv"
    $env:ServiceBusConnection=(az servicebus namespace authorization-rule keys list --resource-group $env:rg --namespace-name $env:serviceBusNS --name RootManageSharedAccessKey --query primaryConnectionString --output tsv)
    write-output "(list (setenv `"ServiceBusConnection`" `"$($env:ServiceBusConnectionString)`")"
@@ -163,9 +202,9 @@ EOF
    az functionapp config appsettings set --name $env:functionAppName --resource-group $env:rg --settings AzureWebJobsServiceBusConnection=$env:ServiceBusConnection
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 11 F10
+   emacs ESC 12 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 11 define environement variables"
+   write-output "step 12 define environement variables"
    $env:ServiceBusConnection=(az servicebus namespace authorization-rule keys list --resource-group $env:rg --namespace-name $env:serviceBusNS --name RootManageSharedAccessKey --query primaryConnectionString --output tsv)
    #write-output "az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom"
    #az webapp config connection-string set --name $env:functionAppName --resource-group $env:rg --settings ServiceBusConnection=$env:ServiceBusConnection --connection-string-type Custom
@@ -181,9 +220,9 @@ EOF
    az functionapp config appsettings list -n $env:functionAppName -g $env:rg
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 12 F10
+   emacs ESC 13 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "Step 12: Upddate the built at timestamp in the source code (ala ChatGPT)"
+   write-output "Step 13: Upddate the built at timestamp in the source code (ala ChatGPT)"
    # Path to your C# source file
    $filePath = "..\SimpleServiceBusSendReceiveAzureFuncs/SimpleServiceBusSenderReceiver.cs"
    # Read the contents of the file
@@ -230,9 +269,9 @@ EOF
    }   
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 13 F10
+   emacs ESC 14 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 13 Publish"
+   write-output "step 14 Publish"
    $path = "publish-functionapp"
    if (Test-Path -LiteralPath $path) {
        write-output "Deleting $path"
@@ -246,9 +285,9 @@ EOF
    End commands to deploy this file using Azure CLI with PowerShell
 
    This code will eventually reside in the pipeline yaml
-   emacs ESC 14 F10
+   emacs ESC 15 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 14 zip"
+   write-output "step 15 zip"
    $path = "publish-functionapp.zip"
    if (Test-Path -LiteralPath $path) {
        write-output "Delete $path "
@@ -266,24 +305,24 @@ EOF
 
    if this step does not work, try zip Deploy
    https://eizdf-func.scm.azurewebsites.net/ZipDeployUI
-   emacs ESC 15 F10
+   emacs ESC 16 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 15 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."
+   write-output "step 16 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."
    write-output "az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip"
    az functionapp deployment source config-zip -g $env:rg -n $env:functionAppName --src ./publish-functionapp.zip
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 16 F10
+   emacs ESC 17 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 16 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."
+   write-output "step 17 deploy compiled C# code deployment to azure resource. For Linux Func created with azure cli this gives error: ERROR: Runtime  is not supported."
    # this worked: 06/26/2024 12:41:15 see *compilation*000003
    # az functionapp deployment source config-zip -g $env:rg -n eizdf-hello-func --src "c:\Users\v-richardsi\source\repos\Siegfried Samples\zipDeployHttpFunc\infrastructure\publish-functionapp.zip"
    az functionapp deployment source config-zip -g $env:rg -n eizdf-func --src "c:\Users\v-richardsi\source\repos\Siegfried Samples\zipDeployHttpFunc\infrastructure\publish-functionapp.zip"
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 17 F10
+   emacs ESC 18 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 17 show Function App"
+   write-output "step 18 show Function App"
    write-output "az functionapp config appsettings list --resource-group $env:rg --name $env:functionAppName"
    az functionapp config appsettings list --resource-group $env:rg --name $env:functionAppName 
    write-output "az functionapp config show --resource-group $env:rg --name $env:functionAppName"
@@ -292,9 +331,9 @@ EOF
    az functionapp show --resource-group $env:rg --name $env:functionAppName 
    End commands to deploy this file using Azure CLI with PowerShell
 
-   emacs ESC 18 F10
+   emacs ESC 19 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 18 Delete Function App"
+   write-output "step 19 Delete Function App"
    write-output "az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan"
    az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan
    End commands to deploy this file using Azure CLI with PowerShell
@@ -315,6 +354,9 @@ param serviceBusNS string = '${uniquePrefix}-servicebus'
 param functionAppName string = '${uniquePrefix}-func'
 param functionPlanName string = '${uniquePrefix}-plan-func'
 param functionAppSku string = 'P1V2'
+param webappPlanName string = '${uniquePrefix}-plan-web'
+param webappSku string = 'B1'
+param webappName string = '${uniquePrefix}-webapp'
 param serviceBusSku string = 'Premium'
 param appInsightsName string = '${uniquePrefix}-appins'
 param storageAccountName string = '${uniquePrefix}stg'
@@ -324,11 +366,13 @@ param ownerId string = '' // objectId of the owner (developer)
 param usePremiumServiceBusFunctionApp bool = false
 param useServiceBusFireWall bool = false
 param useKVForStgConnectionString bool = true
+param createVNetForPEP bool = false
+param createWebAppTestPEP bool = true
 param useSourceControlLoadTestCode bool = true
 param actionGroups_Application_Insights_Smart_Detection_name string = '${uniquePrefix}-detector'
 param logAnalyticsWS string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2'
 
-resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
+resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = if(!createVNetForPEP){
   name: serviceBusNS
   location: location
   sku: {
@@ -510,8 +554,11 @@ resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
     }
   }
 }
+resource serviceBus_existing 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' existing = if(createVNetForPEP)  {
+      name: serviceBusNS
+}
 
-resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01' = {
+resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01' = if(!createVNetForPEP){
   name: storageAccountName
   location: location
   sku: {
@@ -623,6 +670,9 @@ resource storageAccountForFuncApp 'Microsoft.Storage/storageAccounts@2023-04-01'
     }
   }
 }
+resource storageAccountForFuncApp_existing 'Microsoft.Storage/storageAccounts@2023-04-01' existing = if(createVNetForPEP) {
+      name: storageAccountName
+}
 
 output outputOwnerId string = ownerId
 var storageAccountConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccountForFuncApp.name};AccountKey=${storageAccountForFuncApp.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
@@ -631,7 +681,7 @@ output outStorageAccountConnectionString1 string = storageAccountConnectionStrin
 var storageAccountConnectionStringMSI = 'AzureWebJobsStorage__${storageAccountName}'
 output outputStorageAccountConnectionStringMSI string = storageAccountConnectionStringMSI
 
-resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = if(!createVNetForPEP){
   name: functionPlanName
   location: location
   sku: usePremiumServiceBusFunctionApp ? {
@@ -657,7 +707,11 @@ resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
     zoneRedundant: false
   }
 }
-resource appInsights 'microsoft.insights/components@2020-02-02' = {
+resource functionPlan_existing 'Microsoft.Web/serverfarms@2023-12-01' existing = if(createVNetForPEP) {
+      name: functionPlanName
+}
+
+resource appInsights 'microsoft.insights/components@2020-02-02' = if(!createVNetForPEP){
   name: appInsightsName
   location: location
   kind: 'web'
@@ -932,7 +986,7 @@ resource appInsights 'microsoft.insights/components@2020-02-02' = {
   }
 }
 
-resource actionGroups_Application_Insights_Smart_Detection_name_resource 'microsoft.insights/actionGroups@2023-01-01' = {
+resource actionGroups_Application_Insights_Smart_Detection_name_resource 'microsoft.insights/actionGroups@2023-01-01' = if(!createVNetForPEP){
   name: actionGroups_Application_Insights_Smart_Detection_name
   location: 'Global'
   properties: {
@@ -963,7 +1017,7 @@ resource actionGroups_Application_Insights_Smart_Detection_name_resource 'micros
   }
 }
 
-resource smartDetectorAlertRulesFailureAnomalies 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = {
+resource smartDetectorAlertRulesFailureAnomalies 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = if(!createVNetForPEP){
   name: '${uniquePrefix}-failure anomalies'
   location: 'global'
   properties: {
@@ -1015,7 +1069,7 @@ output outNoManagedIdent bool = noManagedIdent
 //
 // I could try to put this in a seperate module and see if that alleviatges the circular dependency.
 
-resource kv 'Microsoft.KeyVault/vaults@2022-02-01-preview' = if (useKVForStgConnectionString) {
+resource kv 'Microsoft.KeyVault/vaults@2022-02-01-preview' = if (useKVForStgConnectionString && !createVNetForPEP) {
   name: '${uniquePrefix}-kv'
   location: location
   properties: {
@@ -1030,13 +1084,20 @@ resource kv 'Microsoft.KeyVault/vaults@2022-02-01-preview' = if (useKVForStgConn
     tenantId: subscription().tenantId    
   }
 }
+resource kv_existing 'Microsoft.KeyVault/vaults@2022-02-01-preview' existing= if (!useKVForStgConnectionString) {
+    name: '${uniquePrefix}-kv'
+}
 
-resource kvaadb2cSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' =  if (useKVForStgConnectionString) {
+resource kvaadb2cSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' =  if (useKVForStgConnectionString && !createVNetForPEP) {
   parent: kv
   name: 'storageAccountConnectionString'
   properties: {
     value: storageAccountConnectionString
   }
+}
+resource kvaadb2cSecret_existing 'Microsoft.KeyVault/vaults/secrets@2019-09-01' existing= if(createVNetForPEP) {
+	parent: kv_existing
+	name: 'storageAccountConnectionString'
 }
 // https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references?tabs=azure-cli#source-app-settings-from-key-vault
 // Source app settings from key vault: https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references?tabs=azure-cli#source-app-settings-from-key-vault
@@ -1048,7 +1109,7 @@ var storageAccountConnectionStringKV = '@Microsoft.KeyVault(VaultName=${kv.name}
 //var storageAccountConnectionStringKV = '@Microsoft.KeyVault(SecretUri=https://${kv.name}.vault.azure.net/secrets/storageAccountConnectionString/)'
 
 
-resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = if(!createVNetForPEP){
   name: functionAppName
   location: location
   kind: 'functionapp'
@@ -1211,85 +1272,180 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       allow: true
     }
   }
-}
-
-resource functionAppConfig 'Microsoft.Web/sites/config@2023-12-01' = {
-  parent: functionApp
-  name: 'web'
-  properties: {
-    numberOfWorkers: 1
-    defaultDocuments: [
-      'Default.htm'
-      'Default.html'
-      'Default.asp'
-      'index.htm'
-      'index.html'
-      'iisstart.htm'
-      'default.aspx'
-      'index.php'
-    ]
-    netFrameworkVersion: 'v4.0'
-    requestTracingEnabled: false
-    remoteDebuggingEnabled: false
-    httpLoggingEnabled: false
-    acrUseManagedIdentityCreds: false
-    logsDirectorySizeLimit: 35
-    detailedErrorLoggingEnabled: false
-    publishingUsername: '$iqa5jvm-func'
-    scmType: 'None'
-    use32BitWorkerProcess: false
-    webSocketsEnabled: false
-    alwaysOn: false
-    managedPipelineMode: 'Integrated'
-    virtualApplications: [
-      {
-        virtualPath: '/'
-        physicalPath: 'site\\wwwroot'
-        preloadEnabled: false
+  resource functionAppConfig 'config@2023-12-01' = {  
+    name: 'web'
+    properties: {
+      numberOfWorkers: 1
+      defaultDocuments: [
+        'Default.htm'
+        'Default.html'
+        'Default.asp'
+        'index.htm'
+        'index.html'
+        'iisstart.htm'
+        'default.aspx'
+        'index.php'
+      ]
+      netFrameworkVersion: 'v4.0'
+      requestTracingEnabled: false
+      remoteDebuggingEnabled: false
+      httpLoggingEnabled: false
+      acrUseManagedIdentityCreds: false
+      logsDirectorySizeLimit: 35
+      detailedErrorLoggingEnabled: false
+      publishingUsername: '$iqa5jvm-func'
+      scmType: 'None'
+      use32BitWorkerProcess: false
+      webSocketsEnabled: false
+      alwaysOn: false
+      managedPipelineMode: 'Integrated'
+      virtualApplications: [
+        {
+          virtualPath: '/'
+          physicalPath: 'site\\wwwroot'
+          preloadEnabled: false
+        }
+      ]
+      loadBalancing: 'LeastRequests'
+      experiments: {
+        rampUpRules: []
       }
-    ]
-    loadBalancing: 'LeastRequests'
-    experiments: {
-      rampUpRules: []
+      autoHealEnabled: false
+        vnetRouteAllEnabled: false
+      vnetPrivatePortsCount: 0
+      localMySqlEnabled: false
+      ipSecurityRestrictions: [
+        {
+          ipAddress: 'Any'
+          action: 'Allow'
+          priority: 2147483647
+          name: 'Allow all'
+          description: 'Allow all access'
+        }
+      ]
+      scmIpSecurityRestrictions: [
+        {
+          ipAddress: 'Any'
+          action: 'Allow'
+          priority: 2147483647
+          name: 'Allow all'
+          description: 'Allow all access'
+       }
+      ]
+      scmIpSecurityRestrictionsUseMain: false
+      http20Enabled: true
+      minTlsVersion: '1.2'
+      scmMinTlsVersion: '1.2'
+      ftpsState: 'FtpsOnly'
+      preWarmedInstanceCount: 0
+      functionAppScaleLimit: 200
+      functionsRuntimeScaleMonitoringEnabled: false
+      minimumElasticInstanceCount: 0
+      azureStorageAccounts: {}
     }
-    autoHealEnabled: false
-    vnetRouteAllEnabled: false
-    vnetPrivatePortsCount: 0
-    localMySqlEnabled: false
-    ipSecurityRestrictions: [
-      {
-        ipAddress: 'Any'
-        action: 'Allow'
-        priority: 2147483647
-        name: 'Allow all'
-        description: 'Allow all access'
-      }
-    ]
-    scmIpSecurityRestrictions: [
-      {
-        ipAddress: 'Any'
-        action: 'Allow'
-        priority: 2147483647
-        name: 'Allow all'
-        description: 'Allow all access'
-      }
-    ]
-    scmIpSecurityRestrictionsUseMain: false
-    http20Enabled: true
-    minTlsVersion: '1.2'
-    scmMinTlsVersion: '1.2'
-    ftpsState: 'FtpsOnly'
-    preWarmedInstanceCount: 0
-    functionAppScaleLimit: 200
-    functionsRuntimeScaleMonitoringEnabled: false
-    minimumElasticInstanceCount: 0
-    azureStorageAccounts: {}
+  }
+} 
+resource functionApp_existing 'Microsoft.Web/sites@2023-12-01' existing = if(createVNetForPEP){
+  name: functionAppName
+}
+// begin VNet
+param virtualNetwork_name string = '${uniquePrefix}-vnet'
+param virtualNetwork_CIDR string = '10.200.0.0/16'
+param subnet1_name string = '${uniquePrefix}-subnet'
+param subnet1_CIDR string = '10.200.1.0/24'
+param privateWebEndpoint_name string = '${uniquePrefix}-pep-webapp'
+param privateFuncEndpoint_name string = '${uniquePrefix}-pep-funcapp'
+param privateLinkConnection_name string = 'privateLink'
+param privateDNSZone_name string = 'privatelink.azurewebsites.net'
+param webapp_dns_name string = '.azurewebsites.net'
+
+
+resource virtualNetwork_name_subnet1_name 'Microsoft.Network/virtualNetworks/subnets@2020-04-01' = if(createVNetForPEP) {
+  parent: virtualNetwork_name_resource
+  name: subnet1_name
+  properties: {
+    addressPrefix: subnet1_CIDR
+    privateEndpointNetworkPolicies: 'Disabled'
   }
 }
 
+resource privateWebEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-04-01' = if(createVNetForPEP) {
+  name: privateWebEndpoint_name
+  location: location
+  properties: {
+    subnet: {
+      id: virtualNetwork_name_subnet1_name.id
+    }
+    privateLinkServiceConnections: [
+      {
+        name: privateLinkConnection_name
+        properties: {
+          privateLinkServiceId: webTestSite_existing.id
+          groupIds: [
+            'sites'
+          ]
+        }
+      }
+    ]
+  }
+}
 
+resource privateFuncEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-04-01' = if(createVNetForPEP) {
+  name: privateFuncEndpoint_name
+  location: location
+  properties: {
+    subnet: {
+      id: virtualNetwork_name_subnet1_name.id
+    }
+    privateLinkServiceConnections: [
+      {
+        name: privateLinkConnection_name
+        properties: {
+          privateLinkServiceId: functionApp_existing.id
+          groupIds: [
+            'sites'
+          ]
+        }
+      }
+    ]
+  }
+}
 
+resource privateDNSZone_name_resource 'Microsoft.Network/privateDnsZones@2018-09-01' = if(createVNetForPEP) {
+  name: privateDNSZone_name
+  location: 'global'
+  dependsOn: [
+    virtualNetwork_name_resource
+  ]
+}
 
+resource privateDNSZone_name_privateDNSZone_name_link 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2018-09-01' = if(createVNetForPEP) {
+  parent: privateDNSZone_name_resource
+  name: '${privateDNSZone_name}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: virtualNetwork_name_resource.id
+    }
+  }
+}
+
+resource privateWebEndpoint_name_dnsgroupname 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2020-03-01' = if(createVNetForPEP) {
+  parent: privateWebEndpoint_name_resource
+  name: 'dnsgroupname'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'config1'
+        properties: {
+          privateDnsZoneId: privateDNSZone_name_resource.id
+        }
+      }
+    ]
+  }
+}
+// end VNet
 
 module assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noManagedIdent) {
   name: 'assign-role-to-functionApp'
@@ -1317,3 +1473,57 @@ module assignRoleToFunctionAppForKV 'assignRbacRoleToFunctionAppForKVAccess.bice
     functionPrincipalId: functionApp.identity.principalId
   }
 }
+
+resource hostingPlan 'Microsoft.Web/serverfarms@2020-12-01' = if (createWebAppTestPEP && !createVNetForPEP){
+  name: webappPlanName
+  location: location
+  sku: {
+    name: webappSku
+    capacity: 0
+  }
+  properties: {
+    name: webappPlanName
+  }
+}
+// is this necessary? Probably not.
+resource hostingPlan_existing 'Microsoft.Web/serverfarms@2020-12-01' existing = if (createWebAppTestPEP && createVNetForPEP){
+  name: webappPlanName
+}
+
+resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && !createVNetForPEP) {
+  name: webappName
+  location: location
+  properties: {
+    serverFarmId: webappPlanName
+    siteConfig: {
+      webSocketsEnabled: true
+      netFrameworkVersion: 'v6.0'
+      metadata: [
+        {
+          name: 'CURRENT_STACK'
+          value: 'dotnet'
+        }
+      ]
+    }
+    httpsOnly: true
+  }
+
+  resource siteName_web 'sourcecontrols@2020-12-01' = if (useSourceControlLoadTestCode && createWebAppTestPEP) {
+    name: 'web'
+    properties: {
+      repoUrl: 'https://github.com/siegfried01/BlazorSvrServiceBusQueueFeeder.git'
+      branch: 'master'
+      isManualIntegration: true
+    }
+  }
+}
+
+resource webTestSite_existing 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && createVNetForPEP) {
+  name: webappName
+  location: location
+}
+
+output appServiceEndpoint string = 'https://${webTestSite.properties.hostNames[0]}'
+
+
+
