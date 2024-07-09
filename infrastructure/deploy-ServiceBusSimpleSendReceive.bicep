@@ -6,8 +6,8 @@
 EOF
 
    Begin common prolog commands
-   If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv002_$($env:USERNAME)" }
-   $env:rg="rg_$($env:name)"
+   If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBSSR-$($env:USERNAME)" }
+   $env:rg="rg-$($env:name)"
    $env:loc=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"xizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
    $env:serviceBusQueueName = 'mainqueue001'
