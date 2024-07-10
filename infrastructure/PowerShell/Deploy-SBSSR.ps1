@@ -99,3 +99,31 @@ az deployment group create --name $env:name --resource-group $env:rg --mode Incr
 # iucpl-servicebus
 # iucpl-webapp
 # iucplfuncstg
+
+# No errors were encountered running this but we saw several warnings
+# aztblogsv12g5jjoo3nvulus and iucplfuncstg are both Storage Accounts
+# Where is aztblogsv12g5jjoo3nvulus coming from
+
+# Deploy code to a Function App
+# Specify the path of the zip file for the Function App code
+$zipPath = Read-Host "Please enter the path of the zip file for the Function App"
+
+# We need to specify a good dotnet and os version
+az functionapp deployment source config-zip `
+    --src $zipPath `
+    --resource-group $env:rg `
+    --name  $env:functionAppName
+
+# Create the Service Bus Namespace
+az servicebus namespace create `
+    --resource-group $env:rg `
+    --name $env:serviceBusNS `
+    --location $env:loc `
+    --sku Basic
+
+# Create the Service Bus Queue
+az servicebus queue create `
+    --resource-group $env:rg `
+    --namespace-name $env:serviceBusNS `
+    --name $env:serviceBusQueueName
+
