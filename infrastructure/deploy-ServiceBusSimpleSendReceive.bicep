@@ -178,7 +178,7 @@ EOF
 
    emacs ESC 10 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 10 create service bus "
+   write-output "step 10 Create Service Bus "
    write-output "az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Basic"
    az servicebus namespace create --resource-group $env:rg --name $env:serviceBusNS --location $env:loc --sku Basic
    write-output "az servicebus queue create --resource-group $env:rg --namespace-name $env:serviceBusNS --name $env:serviceBusQueueName"
@@ -187,7 +187,7 @@ EOF
    
    emacs ESC 11 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "Step 11 Set the Environment Variables"
+   write-output "Step 11 Set the Environment Variables - Also write out the Service Bus Connection String"
    write-output "az servicebus namespace authorization-rule keys list --resource-group $env:rg --namespace-name $env:serviceBusNS --name RootManageSharedAccessKey --query primaryConnectionString --output tsv"
    $env:ServiceBusConnection=(az servicebus namespace authorization-rule keys list --resource-group $env:rg --namespace-name $env:serviceBusNS --name RootManageSharedAccessKey --query primaryConnectionString --output tsv)
    write-output "(list (setenv `"ServiceBusConnection`" `"$($env:ServiceBusConnectionString)`")"
@@ -372,7 +372,7 @@ param useSourceControlLoadTestCode bool = true
 param actionGroups_Application_Insights_Smart_Detection_name string = '${uniquePrefix}-detector'
 param logAnalyticsWS string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2'
 
-resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = if(!createVNetForPEP){
+resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = if(!createVNetForPEP) {
   name: serviceBusNS
   location: location
   sku: {
@@ -1095,7 +1095,7 @@ resource kvaadb2cSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' =  if (us
     value: storageAccountConnectionString
   }
 }
-resource kvaadb2cSecret_existing 'Microsoft.KeyVault/vaults/secrets@2019-09-01' existing= if(createVNetForPEP) {
+resource kvaadb2cSecret_existing 'Microsoft.KeyVault/vaults/secrets@2019-09-01' existing = if(createVNetForPEP) {
 	parent: kv_existing
 	name: 'storageAccountConnectionString'
 }
@@ -1109,7 +1109,7 @@ var storageAccountConnectionStringKV = '@Microsoft.KeyVault(VaultName=${kv.name}
 //var storageAccountConnectionStringKV = '@Microsoft.KeyVault(SecretUri=https://${kv.name}.vault.azure.net/secrets/storageAccountConnectionString/)'
 
 
-resource functionApp 'Microsoft.Web/sites@2023-12-01' = if(!createVNetForPEP){
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = if(!createVNetForPEP) {
   name: functionAppName
   location: location
   kind: 'functionapp'
