@@ -127,3 +127,10 @@ az servicebus queue create `
     --namespace-name $env:serviceBusNS `
     --name $env:serviceBusQueueName
 
+# Retrieve the Service Bus Connection String
+$env:ServiceBusConnection=(az servicebus namespace authorization-rule keys list `
+    --resource-group $env:rg `
+    --namespace-name $env:serviceBusNS `
+    --name RootManageSharedAccessKey `
+    --query primaryConnectionString `
+    --output tsv)
