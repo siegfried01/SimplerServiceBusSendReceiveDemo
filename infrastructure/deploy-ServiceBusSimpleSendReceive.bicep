@@ -39,7 +39,8 @@ EOF
    emacs F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    $createVNetForPEP=[bool]0
-   write-output "Phase 1 deployment: Function App, WebApp (verification only), Storage Accounts and no VNet and no PEP"
+   $createWebAppTestPEP=[bool]0
+   write-output "Phase 1 deployment: Create Service Bus queue, Function App, WebApp=$createWebAppTestPEP, Storage Accounts and VNet=$createVNetForPEP and no PEP"
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters                                                                            `
@@ -113,7 +114,8 @@ EOF
    emacs ESC 5 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    $createVNetForPEP=[bool]1
-   write-output "Phase 1 deployment: VNet, PEP for existing Webapp and Functionapp"
+   $createWebAppTestPEP=[bool]0
+   write-output "Phase 1 deployment: VNet=$createVNetForPEP, CreateWebApp for testing=$createWebAppTestPEP and Functionapp"
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters                                                                            `
@@ -1374,26 +1376,26 @@ resource virtualNetwork_name_subnet1_name 'Microsoft.Network/virtualNetworks/sub
   }
 }
 
-resource privateWebEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-04-01' = if(createVNetForPEP) {
-  name: privateWebEndpoint_name
-  location: location
-  properties: {
-    subnet: {
-      id: virtualNetwork_name_subnet1_name.id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: privateLinkConnection_name
-        properties: {
-          privateLinkServiceId: webTestSite_existing.id
-          groupIds: [
-            'sites'
-          ]
-        }
-      }
-    ]
-  }
-}
+//  resource privateWebEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-04-01' = if(createWebAppTestPEP && createVNetForPEP) {
+//    name: privateWebEndpoint_name
+//    location: location
+//    properties: {
+//      subnet: {
+//        id: virtualNetwork_name_subnet1_name.id
+//      }
+//      privateLinkServiceConnections: [
+//        {
+//          name: privateLinkConnection_name
+//          properties: {
+//            privateLinkServiceId: webTestSite_existing.id
+//            groupIds: [
+//              'sites'
+//            ]
+//          }
+//        }
+//      ]
+//    }
+//  }
 
 resource privateFuncEndpoint_name_resource 'Microsoft.Network/privateEndpoints@2019-04-01' = if(createVNetForPEP) {
   name: privateFuncEndpoint_name
@@ -1436,20 +1438,20 @@ resource privateDNSZone_name_privateDNSZone_name_link 'Microsoft.Network/private
   }
 }
 
-resource privateWebEndpoint_name_dnsgroupname 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2020-03-01' = if(createVNetForPEP) {
-  parent: privateWebEndpoint_name_resource
-  name: 'dnsgroupname'
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'config1'
-        properties: {
-          privateDnsZoneId: privateDNSZone_name_resource.id
-        }
-      }
-    ]
-  }
-}
+//  resource privateWebEndpoint_name_dnsgroupname 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2020-03-01' = if(createWebAppTestPEP && createVNetForPEP) {
+//    parent: privateWebEndpoint_name_resource
+//    name: 'dnsgroupname'
+//    properties: {
+//      privateDnsZoneConfigs: [
+//        {
+//          name: 'config1'
+//          properties: {
+//            privateDnsZoneId: privateDNSZone_name_resource.id
+//          }
+//        }
+//      ]
+//    }
+//  }
 // end VNet
 
 module assignRoleToFunctionApp 'assignRbacRoleToFunctionApp.bicep' = if (!noManagedIdent) {
@@ -1479,58 +1481,92 @@ module assignRoleToFunctionAppForKV 'assignRbacRoleToFunctionAppForKVAccess.bice
   }
 }
 
-resource hostingPlan 'Microsoft.Web/serverfarms@2020-12-01' = if (createWebAppTestPEP && !createVNetForPEP){
-  name: webappPlanName
-  location: location
-  sku: {
-    name: webappSku
-    capacity: 0
-  }
-  properties: {
-    name: webappPlanName
-  }
-}
-// is this necessary? Probably not.
-resource hostingPlan_existing 'Microsoft.Web/serverfarms@2020-12-01' existing = if (createWebAppTestPEP && createVNetForPEP){
-  name: webappPlanName
-}
+//  resource hostingPlan 'Microsoft.Web/serverfarms@2020-12-01' = if (createWebAppTestPEP && !createVNetForPEP){
+//    name: webappPlanName
+//    location: location
+//    sku: {
+//      name: webappSku
+//      capacity: 0
+//    }
+//    properties: {
+//      name: webappPlanName
+//    }
+//  }
+//  // is this necessary? Probably not.
+//  resource hostingPlan_existing 'Microsoft.Web/serverfarms@2020-12-01' existing = if (createWebAppTestPEP && createVNetForPEP){
+//    name: webappPlanName
+//  }
+//  
+//  resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && !createVNetForPEP) {
+//    name: webappName
+//    location: location
+//    properties: {
+//      serverFarmId: webappPlanName
+//      siteConfig: {
+//        webSocketsEnabled: true
+//        netFrameworkVersion: 'v6.0'
+//        metadata: [
+//          {
+//            name: 'CURRENT_STACK'
+//            value: 'dotnet'
+//          }
+//        ]
+//      }
+//      httpsOnly: true
+//    }
+//  
+//    resource siteName_web 'sourcecontrols@2020-12-01' = if (useSourceControlLoadTestCode && createWebAppTestPEP) {
+//      name: 'web'
+//      properties: {
+//        repoUrl: 'https://github.com/siegfried01/BlazorSvrServiceBusQueueFeeder.git'
+//        branch: 'master'
+//        isManualIntegration: true
+//      }
+//    }
+//  }
+//  
+//  resource webTestSite_existing 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && createVNetForPEP) {
+//    name: webappName
+//    location: location
+//  }
+//  
+//  output appServiceEndpoint string = 'https://${webTestSite.properties.hostNames[0]}'
 
-resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && !createVNetForPEP) {
-  name: webappName
-  location: location
-  properties: {
-    serverFarmId: webappPlanName
-    siteConfig: {
-      webSocketsEnabled: true
-      netFrameworkVersion: 'v6.0'
-      metadata: [
-        {
-          name: 'CURRENT_STACK'
-          value: 'dotnet'
-        }
-      ]
-    }
-    httpsOnly: true
-  }
-
-  resource siteName_web 'sourcecontrols@2020-12-01' = if (useSourceControlLoadTestCode && createWebAppTestPEP) {
-    name: 'web'
-    properties: {
-      repoUrl: 'https://github.com/siegfried01/BlazorSvrServiceBusQueueFeeder.git'
-      branch: 'master'
-      isManualIntegration: true
-    }
-  }
-}
-
-resource webTestSite_existing 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && createVNetForPEP) {
-  name: webappName
-  location: location
-}
-
-output appServiceEndpoint string = 'https://${webTestSite.properties.hostNames[0]}'
 
 
+// begin 07/10/2024 09:29:51
+// ERROR: {
+//   "status": "Failed",
+//   "error": {
+//     "code": "DeploymentFailed",
+//     "target": "/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/Microsoft.Resources/deployments/SBusSndRcv_v-richardsi",
+//     "message": "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.",
+//     "details": [
+//       {
+//         "code": "ResourceNotFound",
+//         "message": "The Resource 'Microsoft.Web/sites/xizdf-webapp' under resource group 'rg_SBusSndRcv_v-richardsi' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix"
+//       }
+//     ]
+//   }
+// }
+// 
+// end deploy 07/10/2024 09:29:47
+// resource group = rg_SBusSndRcv_v-richardsi
+// Name                     ResourceType                                        Region    Flavor
+// -----------------------  --------------------------------------------------  --------  -----------
+// xizdf-servicebus         Microsoft.ServiceBus/namespaces                     eastus2
+// xizdf-appins             Microsoft.Insights/components                       eastus2   web
+// xizdf-plan-func          Microsoft.Web/serverFarms                           eastus2   functionapp
+// xizdf-detector           Microsoft.Insights/actiongroups                     global
+// xizdffuncstg             Microsoft.Storage/storageAccounts                   eastus2   StorageV2
+// xizdf-failure anomalies  microsoft.alertsManagement/smartDetectorAlertRules  global
+// xizdf-func               Microsoft.Web/sites                                 eastus2   functionapp
+// all done 07/10/2024 09:29:51 elapse time = 00:01:56 
+// 
+
+
+
+// begin 07/09/2024 13:28:15
 // One time initializations: Create resource group and service principal for github workflow
 // az group create -l eastus2 -n rg_SBusSndRcv002_v-richardsi
 // {
