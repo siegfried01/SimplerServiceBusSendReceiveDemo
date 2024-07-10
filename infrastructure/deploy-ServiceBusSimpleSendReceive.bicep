@@ -6,7 +6,7 @@
 EOF
 
    Begin common prolog commands
-   If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv002_$($env:USERNAME)" }
+   If ($env:USERNAME -eq "shein") { $env:name='SBusSndRcv' } else { $env:name="SBusSndRcv_$($env:USERNAME)" }
    $env:rg="rg_$($env:name)"
    $env:loc=If ($env:AZ_DEFAULT_LOC) { $env:AZ_DEFAULT_LOC} Else {'eastus2'}
    $env:uniquePrefix="$(If ($env:USERNAME -eq "v-richardsi") {"xizdf"} ElseIf ($env:USERNAME -eq "v-paperry") { "iucpl" } ElseIf ($env:USERNAME -eq "shein") {"iqa5jvm"} Else { "jyzwg" } )"
@@ -33,6 +33,7 @@ EOF
    $env:serviceBusNS="$($env:uniquePrefix)-servicebus"
    $env:logAnalyticsWS= If ($env:USERNAME -eq "shein") { "/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2" } else {   "/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/defaultresourcegroup-wus2/providers/microsoft.operationalinsights/workspaces/defaultworkspace-13c9725f-d20a-4c99-8ef4-d7bb78f98cff-wus2" }
    $StartTime = $(get-date)
+   write-output "start build for resource group = $($env:rg) at $StartTime"
    End common prolog commands
 
    emacs F10
@@ -88,17 +89,9 @@ EOF
 
    emacs ESC 3 F10
    Begin commands to shut down this deployment using Azure CLI with PowerShell
-   write-output "Step 3: begin shutdown delete resource group $env:rg and associated service principal $(Get-Date)"
-   #write-output "az ad sp list --display-name $env:sp"
-   #az ad sp list --display-name $env:sp
-   #write-output "az ad sp list --filter "displayname eq '$env:sp'" --output json"
-   #$env:spId=(az ad sp list --filter "displayname eq '$env:sp'" --query "[].id" --output tsv)
-   #write-output "az ad sp delete --id $env:spId"
-   #az ad sp delete --id $env:spId
+   write-output "Step 3: begin shutdown delete resource group $($env:rg) $(Get-Date)"
    write-output "az group delete -n $env:rg"
    az group delete -n $env:rg --yes
-   write-output "az group delete -n $env:rg_old"
-   az group delete -n $env:rg_old --yes
    write-output "shutdown is complete $env:rg $(Get-Date)"
    End commands to shut down this deployment using Azure CLI with PowerShell
 
@@ -339,6 +332,7 @@ EOF
    End commands to deploy this file using Azure CLI with PowerShell
 
    Begin common epilog commands
+   write-output "resource group = $($env:rg)"
    az resource list -g $env:rg --query "[?resourceGroup=='$env:rg'].{ name: name, flavor: kind, resourceType: type, region: location }" --output table  | ForEach-Object { $_ -replace "`r", ""}
    $elapsedTime = $(get-date) - $StartTime
    $totalTime = "{0:HH:mm:ss}" -f ([datetime]$elapsedTime.Ticks)
