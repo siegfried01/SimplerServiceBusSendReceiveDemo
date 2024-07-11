@@ -136,7 +136,7 @@ EOF
    emacs ESC 5 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    $createVNetForPEP=[bool]1
-   $createWebAppTestPEP=[bool]0
+   $createWebAppTestPEP=[bool]1
    write-output "Step 5: Phase 2 deployment: VNet=$createVNetForPEP and use existing FunctionApp, existing WebApp and existing Service Bus"
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
