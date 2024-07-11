@@ -54,13 +54,13 @@ EOF
    $createWebAppTestPEP=[bool]1
    write-output "Phase 1 deployment: Create Service Bus queue (tier=$($env:serviceBusSku)), Function App (tier=$($env:functionAppSku)) WebApp=$($createWebAppTestPEP), Storage Accounts and VNet=$createVNetForPEP and no PEP useSourceControlLoadTestCode=$useSourceControlLoadTestCode"
    $resourceGroupExists = Get-AzResourceGroup -Name $env:rg -ErrorAction SilentlyContinue
-   if ($resourceGroupExists) {
-       write-output "$($env:rg) exists, no need to create"
-   }
-   else {
-       write-output "az group create --name $($env:rg) --location $($env:loc)"
-       az group create --name $env:rg --location $env:loc
-   }
+   #if ($resourceGroupExists) {
+   #    write-output "$($env:rg) exists, no need to create"
+   #}
+   #else {
+   #    write-output "az group create --name $($env:rg) --location $($env:loc)"
+   #    az group create --name $env:rg --location $env:loc
+   #}
    write-output "az deployment group create --name $($env:name) --resource-group $($env:rg) --mode Incremental --template-file deploy-ServiceBusSimpleSendReceive.bicep"
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
@@ -137,7 +137,7 @@ EOF
    Begin commands to deploy this file using Azure CLI with PowerShell
    $createVNetForPEP=[bool]1
    $createWebAppTestPEP=[bool]0
-   write-output "Phase 2 deployment: VNet=$createVNetForPEP and use existing FunctionApp, existing WebApp and existing Service Bus"
+   write-output "Step 5: Phase 2 deployment: VNet=$createVNetForPEP and use existing FunctionApp, existing WebApp and existing Service Bus"
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters                                                                            `
@@ -412,16 +412,16 @@ resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = if(!c
     zoneRedundant: false
   }
 
-  resource serviceBusNS_RootManageSharedAccessKey 'authorizationrules@2022-10-01-preview' = {
-    name: 'RootManageSharedAccessKey'
-    properties: {
-      rights: [
-        'Listen'
-        'Manage'
-        'Send'
-      ]
-    }
-  }
+  // resource serviceBusNS_RootManageSharedAccessKey 'authorizationrules@2022-10-01-preview' = {
+  //   name: 'RootManageSharedAccessKey'
+  //   properties: {
+  //     rights: [
+  //       'Listen'
+  //       'Manage'
+  //       'Send'
+  //     ]
+  //   }
+  // }
 
   resource serviceBusNS_default 'networkrulesets@2022-10-01-preview' = {
     name: 'default'
@@ -562,9 +562,9 @@ resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = if(!c
   resource serviceBusQueue 'queues@2022-10-01-preview' = {
     name: serviceBusQueueName
     properties: {
-      maxMessageSizeInKilobytes: usePremiumServiceBusFunctionApp? 1024 : 256
+      // maxMessageSizeInKilobytes: usePremiumServiceBusFunctionApp? 1024 : 256
       lockDuration: 'PT1M'
-      maxSizeInMegabytes: 1024
+      // maxSizeInMegabytes: 1024
       requiresDuplicateDetection: false
       requiresSession: false
       defaultMessageTimeToLive: 'P14D'
