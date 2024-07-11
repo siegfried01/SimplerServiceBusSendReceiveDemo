@@ -136,8 +136,8 @@ EOF
    emacs ESC 5 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
    $createVNetForPEP=[bool]1
-   $createWebAppTestPEP=[bool]0
-   write-output "Step 5: Phase 2 deployment: VNet=$createVNetForPEP and use existing FunctionApp, existing WebApp and existing Service Bus"
+   $createWebAppTestPEP=[bool]1
+   write-output "Step 5: Phase 2 deployment: VNet=$createVNetForPEP createWebAppTestPEP=$createWebAppTestPEP and use existing FunctionApp, existing WebApp and existing Service Bus"
    az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters                                                                            `
@@ -1532,8 +1532,22 @@ resource hostingPlan_existing 'Microsoft.Web/serverfarms@2020-12-01' existing = 
 resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && !createVNetForPEP) {
   name: webappName
   location: location
+  kind: 'app'
   properties: {
     serverFarmId: webappPlanName
+    enabled: true
+    hostNameSslStates: [
+      {
+        name: concat(webappName, webapp_dns_name)
+        sslState: 'Disabled'
+        hostType: 'Standard'
+      }
+      {
+        name: '${webappName}.scm${webapp_dns_name}'
+        sslState: 'Disabled'
+        hostType: 'Repository'
+      }
+    ]
     siteConfig: {
       webSocketsEnabled: true
       netFrameworkVersion: 'v6.0'
@@ -1575,6 +1589,13 @@ resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP 
       isManualIntegration: true
     }
   }
+  resource site_name_site_name_webapp_dns_name 'hostNameBindings@2019-08-01' = {
+    name: '${webappName}${webapp_dns_name}'
+    properties: {
+      siteName: webappName
+      hostNameType: 'Verified'
+    }
+  }
 }
 
 resource webTestSite_existing 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && createVNetForPEP) {
@@ -1586,6 +1607,83 @@ resource webTestSite_existing 'Microsoft.Web/sites@2020-12-01' = if (createWebAp
 //  output appServiceEndpoint string = 'https://${webTestSite.properties.hostNames[0]}'
 
 // begin failure log
+// Set-AzResourceGroup -Name rg_SBusSndRcv_v-richardsi -Tag System.Collections.Hashtable StatusCode: 403 ReasonPhrase: Forbidden
+// start build for resource group = rg_SBusSndRcv_v-richardsi at 07/11/2024 15:57:39
+// Step 5: Phase 2 deployment: VNet=True createWebAppTestPEP=True and use existing FunctionApp, existing WebApp and existing Service Bus
+// WARNING: C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\assignRbacRoleToFunctionApp.bicep(21,5) : Warning BCP073: The property "scope" is read-only. Expressions cannot be assigned to read-only properties. If this is an inaccuracy in the documentation, please report it to the Bicep Team. [https://aka.ms/bicep-type-issues]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(369,7) : Warning no-unused-params: Parameter "webAppSku" is declared but never used. [https://aka.ms/bicep/linter/no-unused-params]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(574,10) : Warning no-unused-existing-resources: Existing resource "serviceBus_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(690,10) : Warning no-unused-existing-resources: Existing resource "storageAccountForFuncApp_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(727,10) : Warning no-unused-existing-resources: Existing resource "functionPlan_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(1115,10) : Warning no-unused-existing-resources: Existing resource "kvaadb2cSecret_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(1521,10) : Warning no-unused-existing-resources: Existing resource "hostingPlan_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(1534,15) : Warning prefer-interpolation: Use string interpolation instead of the concat function. [https://aka.ms/bicep/linter/prefer-interpolation]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(1547,7) : Warning BCP037: The property "metadata" is not allowed on objects of type "SiteConfig". Permissible properties include "acrUseManagedIdentityCreds", "acrUserManagedIdentityID", "alwaysOn", "apiDefinition", "apiManagementConfig", "appCommandLine", "autoHealEnabled", "autoHealRules", "autoSwapSlotName", "azureStorageAccounts", "connectionStrings", "cors", "defaultDocuments", "detailedErrorLoggingEnabled", "documentRoot", "experiments", "ftpsState", "functionAppScaleLimit", "functionsRuntimeScaleMonitoringEnabled", "handlerMappings", "healthCheckPath", "http20Enabled", "httpLoggingEnabled", "ipSecurityRestrictions", "javaContainer", "javaContainerVersion", "javaVersion", "keyVaultReferenceIdentity", "limits", "linuxFxVersion", "loadBalancing", "localMySqlEnabled", "logsDirectorySizeLimit", "managedPipelineMode", "managedServiceIdentityId", "minimumElasticInstanceCount", "minTlsVersion", "nodeVersion", "numberOfWorkers", "phpVersion", "powerShellVersion", "preWarmedInstanceCount", "publicNetworkAccess", "publishingUsername", "push", "pythonVersion", "remoteDebuggingEnabled", "remoteDebuggingVersion", "requestTracingEnabled", "requestTracingExpirationTime", "scmIpSecurityRestrictions", "scmIpSecurityRestrictionsUseMain", "scmMinTlsVersion", "scmType", "tracingOptions", "use32BitWorkerProcess", "virtualApplications", "vnetName", "vnetPrivatePortsCount", "vnetRouteAllEnabled", "websiteTimeZone", "windowsFxVersion", "xManagedServiceIdentityId". If this is an inaccuracy in the documentation, please report it to the Bicep Team. [https://aka.ms/bicep-type-issues]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\assignRbacRoleToFunctionAppForKVAccess.bicep(23,5) : Warning BCP073: The property "scope" is read-only. Expressions cannot be assigned to read-only properties. If this is an inaccuracy in the documentation, please report it to the Bicep Team. [https://aka.ms/bicep-type-issues]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\assignRbacRoleToFunctionAppForStorageAccount.bicep(21,5) : Warning BCP073: The property "scope" is read-only. Expressions cannot be assigned to read-only properties. If this is an inaccuracy in the documentation, please report it to the Bicep Team. [https://aka.ms/bicep-type-issues]
+
+// ERROR: {
+//   "status": "Failed",
+//   "error": {
+//     "code": "DeploymentFailed",
+//     "target": "/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/Microsoft.Resources/deployments/SBusSndRcv_v-richardsi",
+//     "message": "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.",
+//     "details": [
+//       {
+//         "code": "BadRequest",
+//         "target": "/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/Microsoft.Web/sites/xizdf-webapp",
+//         "message": {
+//                       "Code": "BadRequest",
+//                       "Message": "The parameter properties has an invalid value.",
+//                       "Target": null,
+//                       "Details": [
+//                         {
+//                           "Message": "The parameter properties has an invalid value."
+//                         },
+//                         {
+//                           "Code": "BadRequest"
+//                         },
+//                         {
+//                           "ErrorEntity": {
+//                             "ExtendedCode": "51008",
+//                             "MessageTemplate": "The parameter {0} has an invalid value.",
+//                             "Parameters": [
+//                               "properties"
+//                             ],
+//                             "Code": "BadRequest",
+//                             "Message": "The parameter properties has an invalid value."
+//                           }
+//                         }
+//                       ],
+//                       "Innererror": null
+//                     }
+//       }
+//     ]
+//   }
+// }
+
+// end deploy 07/11/2024 15:59:29
+// resource group = rg_SBusSndRcv_v-richardsi
+// Name                                                              Flavor       ResourceType                                           Region
+// ----------------------------------------------------------------  -----------  -----------------------------------------------------  --------
+// xizdf-plan-func                                                   functionapp  Microsoft.Web/serverFarms                              eastus2
+// xizdf-func                                                        functionapp  Microsoft.Web/sites                                    eastus2
+// xizdf-appins                                                      web          Microsoft.Insights/components                          eastus2
+// xizdf-servicebus                                                               Microsoft.ServiceBus/namespaces                        eastus2
+// xizdffuncstg                                                      StorageV2    Microsoft.Storage/storageAccounts                      eastus2
+// xizdf-plan-web                                                    app          Microsoft.Web/serverFarms                              eastus2
+// xizdf-detector                                                                 Microsoft.Insights/actiongroups                        global
+// xizdf-failure anomalies                                                        microsoft.alertsManagement/smartDetectorAlertRules     global
+// xizdf-webapp                                                      app          Microsoft.Web/sites                                    eastus2
+// aztblogsv12u2gzyv3w2zong                                          StorageV2    microsoft.storage/storageAccounts                      eastus2
+// xizdf-vnet                                                                     Microsoft.Network/virtualNetworks                      eastus2
+// privatelink.azurewebsites.net                                                  Microsoft.Network/privateDnsZones                      global
+// xizdf-pep-funcapp                                                              Microsoft.Network/privateEndpoints                     eastus2
+// xizdf-pep-funcapp.nic.8af606ab-ccf2-4fc6-a810-3a5e27daedc9                     Microsoft.Network/networkInterfaces                    eastus2
+// privatelink.azurewebsites.net/privatelink.azurewebsites.net-link               Microsoft.Network/privateDnsZones/virtualNetworkLinks  global
+// all done 07/11/2024 15:59:32 elapse time = 00:01:53 
+
+// Process compilation finished
 
 
 // Set-AzResourceGroup: 
