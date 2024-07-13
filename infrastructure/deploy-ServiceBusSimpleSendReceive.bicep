@@ -52,7 +52,7 @@ EOF
    Begin commands to deploy this file using Azure CLI with PowerShell
    $createVNetForPEP=[bool]0
    $createWebAppTestPEP=[bool]1
-   write-output "Phase 1 deployment: Create Service Bus queue (tier=$($env:serviceBusSku)), Function App (tier=$($env:functionAppSku)) WebApp=$($createWebAppTestPEP), Storage Accounts and VNet=$createVNetForPEP and no PEP useSourceControlLoadTestCode=$useSourceControlLoadTestCode"
+   write-output "Phase 1 deployment: Create Service Bus queue (tier=$($env:serviceBusSku)), Function App (tier=$($env:functionAppSku)) WebApp=$($createWebAppTestPEP), Storage Accounts and VNet=$createVNetForPEP and no PEP useSourceControlLoadTestCode=$useSourceControlLoadTestCode functionAppSku=$($env:functionAppSku) webAppSku=$($env:webAppSku) useServiceBusFireWall=$useServiceBusFireWall serviceBusSku=$($env:serviceBusSku) "
    $resourceGroupExists = Get-AzResourceGroup -Name $env:rg -ErrorAction SilentlyContinue
    #if ($resourceGroupExists) {
    #    write-output "$($env:rg) exists, no need to create"
@@ -125,10 +125,6 @@ EOF
    az group create -l $env:loc -n $env:rg
    $env:id=(az group show --name $env:rg --query 'id' --output tsv)
    write-output "id=$env:id"
-   #write-output "Skip creating the service principal for github workflow"
-   #write-output "az ad sp create-for-rbac --name $env:sp --json-auth --role contributor --scopes $env:id"
-   #az ad sp create-for-rbac --name $env:sp --json-auth --role contributor --scopes $env:id
-   #write-output "go to github settings->secrets and create a secret called AZURE_CREDENTIALS with the above output"
    write-output "{`n`"`$schema`": `"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#`",`n `"contentVersion`": `"1.0.0.0`",`n `"resources`": [] `n}" | Out-File -FilePath clear-resources.json
    End commands for one time initializations using Azure CLI with PowerShell
 
@@ -138,7 +134,7 @@ EOF
    $createVNetForPEP=[bool]1
    $createWebAppTestPEP=[bool]1
    write-output "Step 5: Phase 2 deployment: VNet=$createVNetForPEP createWebAppTestPEP=$createWebAppTestPEP and use existing FunctionApp, existing WebApp and existing Service Bus"
-   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
+   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental --verbose  --debug  `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters                                                                            `
      "{'uniquePrefix'                   : {'value': '$env:uniquePrefix'}}"                   `
@@ -1534,7 +1530,7 @@ resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP 
   location: location
   kind: 'app'
   properties: {
-    serverFarmId: webappPlanName
+    serverFarmId: hostingPlan.id
     enabled: true
     hostNameSslStates: [
       {
@@ -1549,31 +1545,31 @@ resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP 
       }
     ]
     siteConfig: {
-      webSocketsEnabled: true
-      netFrameworkVersion: 'v6.0'
-      metadata: [
-        {
-          name: 'CURRENT_STACK'
-          value: 'dotnet'
-        }
-      ]
-      appSettings: [
-        {
-          name: 'busNS'
-          value: serviceBusNS
-        }
-        {
-          name: 'queue'
-          value: serviceBusQueueName
-        }
-        {
-          name: 'serviceBusConnectionString' 
-          value: serviceBusConnection
-        }
-        // https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-service-bus-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv5&pivots=programming-language-javascript#connection-string
-      ]  
+      //  webSocketsEnabled: true
+      //  netFrameworkVersion: 'v6.0'
+      //  metadata: [
+      //    {
+      //      name: 'CURRENT_STACK'
+      //      value: 'dotnet'
+      //    }
+      //  ]
+      //  appSettings: [
+      //    {
+      //      name: 'busNS'
+      //      value: serviceBusNS
+      //    }
+      //    {
+      //      name: 'queue'
+      //      value: serviceBusQueueName
+      //    }
+      //    {
+      //      name: 'serviceBusConnectionString' 
+      //      value: serviceBusConnection
+      //    }
+      //    // https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-service-bus-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv5&pivots=programming-language-javascript#connection-string
+      //  ]  
     }
-    httpsOnly: true
+    //httpsOnly: true
   }
   //  resource slot 'slots@2020-06-01' = {
   //    name: 'Production'
@@ -1587,6 +1583,12 @@ resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP 
       repoUrl: 'https://github.com/siegfried01/BlazorSvrServiceBusQueueFeeder.git'
       branch: 'master'
       isManualIntegration: true
+    }
+  }
+  resource site_name_web 'config@2019-08-01' = {   
+    name: 'web'
+    properties: {
+      ftpsState: 'AllAllowed'
     }
   }
   resource site_name_site_name_webapp_dns_name 'hostNameBindings@2019-08-01' = {
@@ -1607,6 +1609,87 @@ resource webTestSite_existing 'Microsoft.Web/sites@2020-12-01' = if (createWebAp
 //  output appServiceEndpoint string = 'https://${webTestSite.properties.hostNames[0]}'
 
 // begin failure log
+
+
+// Set-AzResourceGroup -Name rg_SBusSndRcv_v-richardsi -Tag System.Collections.Hashtable StatusCode: 403 ReasonPhrase: Forbidden
+// start build for resource group = rg_SBusSndRcv_v-richardsi at 07/12/2024 09:57:02
+// Step 5: Phase 2 deployment: VNet=True createWebAppTestPEP=True and use existing FunctionApp, existing WebApp and existing Service Bus
+// WARNING: C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\assignRbacRoleToFunctionAppForStorageAccount.bicep(21,5) : Warning BCP073: The property "scope" is read-only. Expressions cannot be assigned to read-only properties. If this is an inaccuracy in the documentation, please report it to the Bicep Team. [https://aka.ms/bicep-type-issues]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\assignRbacRoleToFunctionApp.bicep(21,5) : Warning BCP073: The property "scope" is read-only. Expressions cannot be assigned to read-only properties. If this is an inaccuracy in the documentation, please report it to the Bicep Team. [https://aka.ms/bicep-type-issues]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\assignRbacRoleToFunctionAppForKVAccess.bicep(23,5) : Warning BCP073: The property "scope" is read-only. Expressions cannot be assigned to read-only properties. If this is an inaccuracy in the documentation, please report it to the Bicep Team. [https://aka.ms/bicep-type-issues]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(376,7) : Warning no-unused-params: Parameter "webAppSku" is declared but never used. [https://aka.ms/bicep/linter/no-unused-params]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(581,10) : Warning no-unused-existing-resources: Existing resource "serviceBus_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(697,10) : Warning no-unused-existing-resources: Existing resource "storageAccountForFuncApp_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(734,10) : Warning no-unused-existing-resources: Existing resource "functionPlan_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(1122,10) : Warning no-unused-existing-resources: Existing resource "kvaadb2cSecret_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(1528,10) : Warning no-unused-existing-resources: Existing resource "hostingPlan_existing" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]
+// C:\Users\v-richardsi\source\repos\Architecture\Sbox360\Design\Verification\ServiceBusSimpleSendReceive\infrastructure\deploy-ServiceBusSimpleSendReceive.bicep(1541,15) : Warning prefer-interpolation: Use string interpolation instead of the concat function. [https://aka.ms/bicep/linter/prefer-interpolation]
+
+// ERROR: {
+//   "status": "Failed",
+//   "error": {
+//     "code": "DeploymentFailed",
+//     "target": "/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/Microsoft.Resources/deployments/SBusSndRcv_v-richardsi",
+//     "message": "At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.",
+//     "details": [
+//       {
+//         "code": "BadRequest",
+//         "target": "/subscriptions/13c9725f-d20a-4c99-8ef4-d7bb78f98cff/resourceGroups/rg_SBusSndRcv_v-richardsi/providers/Microsoft.Web/sites/xizdf-webapp",
+//         "message": {
+//                       "Code": "BadRequest",
+//                       "Message": "The parameter properties has an invalid value.",
+//                       "Target": null,
+//                       "Details": [
+//                         {
+//                           "Message": "The parameter properties has an invalid value."
+//                         },
+//                         {
+//                           "Code": "BadRequest"
+//                         },
+//                         {
+//                           "ErrorEntity": {
+//                             "ExtendedCode": "51008",
+//                             "MessageTemplate": "The parameter {0} has an invalid value.",
+//                             "Parameters": [
+//                               "properties"
+//                             ],
+//                             "Code": "BadRequest",
+//                             "Message": "The parameter properties has an invalid value."
+//                           }
+//                         }
+//                       ],
+//                       "Innererror": null
+//                     }
+//       }
+//     ]
+//   }
+// }
+
+// end deploy 07/12/2024 09:58:55
+// resource group = rg_SBusSndRcv_v-richardsi
+// Name                                                              Flavor       ResourceType                                           Region
+// ----------------------------------------------------------------  -----------  -----------------------------------------------------  --------
+// xizdf-plan-func                                                   functionapp  Microsoft.Web/serverFarms                              eastus2
+// xizdf-func                                                        functionapp  Microsoft.Web/sites                                    eastus2
+// xizdf-appins                                                      web          Microsoft.Insights/components                          eastus2
+// xizdf-servicebus                                                               Microsoft.ServiceBus/namespaces                        eastus2
+// xizdffuncstg                                                      StorageV2    Microsoft.Storage/storageAccounts                      eastus2
+// xizdf-plan-web                                                    app          Microsoft.Web/serverFarms                              eastus2
+// xizdf-detector                                                                 Microsoft.Insights/actiongroups                        global
+// xizdf-failure anomalies                                                        microsoft.alertsManagement/smartDetectorAlertRules     global
+// xizdf-webapp                                                      app          Microsoft.Web/sites                                    eastus2
+// aztblogsv12u2gzyv3w2zong                                          StorageV2    microsoft.storage/storageAccounts                      eastus2
+// xizdf-vnet                                                                     Microsoft.Network/virtualNetworks                      eastus2
+// privatelink.azurewebsites.net                                                  Microsoft.Network/privateDnsZones                      global
+// xizdf-pep-funcapp                                                              Microsoft.Network/privateEndpoints                     eastus2
+// xizdf-pep-funcapp.nic.d10aab10-6006-498a-9647-93fce436b167                     Microsoft.Network/networkInterfaces                    eastus2
+// privatelink.azurewebsites.net/privatelink.azurewebsites.net-link               Microsoft.Network/privateDnsZones/virtualNetworkLinks  global
+// all done 07/12/2024 09:58:58 elapse time = 00:01:55 
+
+// Process compilation finished
+
+
+
 // Set-AzResourceGroup -Name rg_SBusSndRcv_v-richardsi -Tag System.Collections.Hashtable StatusCode: 403 ReasonPhrase: Forbidden
 // start build for resource group = rg_SBusSndRcv_v-richardsi at 07/11/2024 15:57:39
 // Step 5: Phase 2 deployment: VNet=True createWebAppTestPEP=True and use existing FunctionApp, existing WebApp and existing Service Bus
