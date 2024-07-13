@@ -1600,9 +1600,12 @@ resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP 
   }
 }
 
-resource webTestSite_existing 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP && createVNetForPEP) {
+resource webTestSite_existing 'Microsoft.Web/sites@2020-12-01' existing = if (createWebAppTestPEP && createVNetForPEP) {
+  // This will be run as part of Phase 2
+  // The name has to be the current webTestSite
   name: webappName
-  location: location
+  // location: location
+  // location was throwing an error due to the previous definition in the other webTestSite instance
 }
 //
 //  This causes problems if we are not creating the website
