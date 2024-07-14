@@ -14,12 +14,13 @@ EOF
    $env:serviceBusQueueName = 'mainqueue001'
    $useServiceBusFireWall=[bool]0
    $noManagedIdent=[bool]1
+   $useApplicationInsights=[bool]0
    $useSourceControlLoadTestCode=If ($env:USERNAME -eq "shein") { [bool]1 } Else { [bool]0 }
    $useKVForStgConnectionString=[bool]0
    $createVNetForPEP=[bool]0
    $createWebAppTestPEP=[bool]1
    $env:myIPAddress="172.56.105.149"
-   $usePremiumServiceBusFunctionApp=[bool]1
+   $usePremiumServiceBusFunctionApp=If ($env:USERNAME -eq "shein") { [bool]0 } Else { [bool]1 }
    If ( $usePremiumServiceBusFunctionApp ) {
      $env:functionAppSku='P1V2'
      $env:webAppSku='P1V2'
@@ -28,7 +29,7 @@ EOF
      $env:serviceBusSku='Standard'
      $useServiceBusFireWall=[bool]0
    } Else {
-     $env:webAppSku='B1'
+     $env:webAppSku==If ($env:USERNAME -eq "shein") { 'F1' } Else { 'B1' }
      $env:functionAppSku='Y1'
      $env:serviceBusSku='Basic'
      $useServiceBusFireWall=[bool]0
@@ -52,7 +53,7 @@ EOF
    Begin commands to deploy this file using Azure CLI with PowerShell
    $createVNetForPEP=[bool]0
    $createWebAppTestPEP=[bool]1
-   write-output "Phase 1 deployment: Create Service Bus queue (tier=$($env:serviceBusSku)), Function App (tier=$($env:functionAppSku)) WebApp=$($createWebAppTestPEP), Storage Accounts and VNet=$createVNetForPEP and no PEP useSourceControlLoadTestCode=$useSourceControlLoadTestCode functionAppSku=$($env:functionAppSku) webAppSku=$($env:webAppSku) useServiceBusFireWall=$useServiceBusFireWall serviceBusSku=$($env:serviceBusSku) "
+   write-output "Phase 1 deployment: Create Service Bus queue (tier=$($env:serviceBusSku)), Function App (tier=$($env:functionAppSku)) WebApp=$($createWebAppTestPEP), Storage Accounts and VNet=$createVNetForPEP and no PEP useSourceControlLoadTestCode=$useSourceControlLoadTestCode functionAppSku=$($env:functionAppSku) webAppSku=$($env:webAppSku) useServiceBusFireWall=$useServiceBusFireWall "
    $resourceGroupExists = Get-AzResourceGroup -Name $env:rg -ErrorAction SilentlyContinue
    #if ($resourceGroupExists) {
    #    write-output "$($env:rg) exists, no need to create"
@@ -69,6 +70,7 @@ EOF
      "{'location'                       : {'value': '$env:loc'}}"                            `
      "{'myIPAddress'                    : {'value': '$env:myIPAddress'}}"                    `
      "{'noManagedIdent'                 : {'value': $noManagedIdent}}"                       `
+     "{'useApplicationInsights'         : {'value': $useApplicationInsights}}"               `
      "{'functionAppSku'                 : {'value': '$env:functionAppSku'}}"                 `
      "{'webAppSku'                      : {'value': '$env:functionAppSku'}}"                 `
      "{'serviceBusSku'                  : {'value': '$env:serviceBusSku'}}"                  `
@@ -133,14 +135,15 @@ EOF
    Begin commands to deploy this file using Azure CLI with PowerShell
    $createVNetForPEP=[bool]1
    $createWebAppTestPEP=[bool]1
-   write-output "Step 5: Phase 2 deployment: VNet=$createVNetForPEP and use existing FunctionApp, existing WebApp and existing Service Bus"
-   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental   `
+   write-output "Step 5: Phase 2 deployment: VNet=$createVNetForPEP createWebAppTestPEP=$createWebAppTestPEP and use existing FunctionApp, existing WebApp and existing Service Bus"
+   az deployment group create --name $env:name --resource-group $env:rg --mode Incremental  --debug  `
      --template-file  "deploy-ServiceBusSimpleSendReceive.bicep"                             `
      --parameters                                                                            `
      "{'uniquePrefix'                   : {'value': '$env:uniquePrefix'}}"                   `
      "{'location'                       : {'value': '$env:loc'}}"                            `
      "{'myIPAddress'                    : {'value': '$env:myIPAddress'}}"                    `
      "{'noManagedIdent'                 : {'value': $noManagedIdent}}"                       `
+     "{'useApplicationInsights'         : {'value': $useApplicationInsights}}"               `
      "{'functionAppSku'                 : {'value': '$env:functionAppSku'}}"                 `
      "{'serviceBusSku'                  : {'value': '$env:serviceBusSku'}}"                  `
      "{'usePremiumServiceBusFunctionApp': {'value': $usePremiumServiceBusFunctionApp}}"      `
@@ -345,8 +348,21 @@ EOF
    End commands to deploy this file using Azure CLI with PowerShell
 
    emacs ESC 19 F10
+   Begin commands to execute this file using Azure CLI with PowerShell
+   write-output "Step 19: To verify the static IP address and the functionality of the private endpoint, a test virtual machine connected to your virtual network is required."
+   write-output "Create the virtual machine with az vm create. $(Get-Date)"
+   $env:vnetName="$($env:uniquePrefix)-vnet"
+   $env:subnetName="$($env:uniquePrefix)-subnet"
+   $env:vmName="$($env:uniquePrefix)-vm"
+   $env:VMSize="Standard_B4ms"
+   write-output "az vm create --resource-group $env:rg  --name $env:vmName  --image Win2022Datacenter --vnet-name $env:vnetName  --subnet $env:subnetName  --admin-username azureuser --admin-password JxQZEwsTc5y0bSIosT7KGa6 --size $env:VMSize"
+   az vm create --resource-group $env:rg  --name $env:vmName  --image Win2022Datacenter --vnet-name $env:vnetName  --subnet $env:subnetName  --admin-username azureuser --admin-password JxQZEwsTc5y0bSIosT7KGa6 --size $env:VMSize
+   write-output "Done creating VM $(Get-Date)"
+   End commands to execute this file using Azure CLI with PowerShell
+
+   emacs ESC 20 F10
    Begin commands to deploy this file using Azure CLI with PowerShell
-   write-output "step 19 Delete Function App"
+   write-output "step 20 Delete Function App"
    write-output "az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan"
    az functionapp delete --resource-group $env:rg --name $env:functionAppName --keep-empty-plan
    End commands to deploy this file using Azure CLI with PowerShell
@@ -382,6 +398,7 @@ param appInsightsName string = '${uniquePrefix}-appins'
 param storageAccountName string = '${uniquePrefix}stg'
 param myIPAddress string
 param noManagedIdent bool = false
+param useApplicationInsights bool = false
 param ownerId string = '' // objectId of the owner (developer)
 param usePremiumServiceBusFunctionApp bool = false
 param useServiceBusFireWall bool = false
@@ -392,186 +409,20 @@ param useSourceControlLoadTestCode bool = true
 param actionGroups_Application_Insights_Smart_Detection_name string = '${uniquePrefix}-detector'
 param logAnalyticsWS string = '/subscriptions/acc26051-92a5-4ed1-a226-64a187bc27db/resourceGroups/DefaultResourceGroup-WUS2/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-acc26051-92a5-4ed1-a226-64a187bc27db-WUS2'
 
-resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = if(!createVNetForPEP){
+resource serviceBus 'Microsoft.ServiceBus/namespaces@2021-11-01' = if(!createVNetForPEP){
   name: serviceBusNS
   location: location
   sku: {
-    name: usePremiumServiceBusFunctionApp ? serviceBusSku : 'Basic'
-    tier: usePremiumServiceBusFunctionApp ? serviceBusSku : 'Basic'
+    name: serviceBusSku
+    tier: serviceBusSku
   }
   properties: {
-    premiumMessagingPartitions: 0
     minimumTlsVersion: '1.2'
     publicNetworkAccess: 'Enabled'
-    disableLocalAuth: false
-    privateEndpointConnections: []
     zoneRedundant: false
-  }
-
-  // resource serviceBusNS_RootManageSharedAccessKey 'authorizationrules@2022-10-01-preview' = {
-  //   name: 'RootManageSharedAccessKey'
-  //   properties: {
-  //     rights: [
-  //       'Listen'
-  //       'Manage'
-  //       'Send'
-  //     ]
-  //   }
-  // }
-
-  resource serviceBusNS_default 'networkrulesets@2022-10-01-preview' = {
-    name: 'default'
-    properties: {
-      publicNetworkAccess: 'Enabled'
-      defaultAction: 'Allow'
-      virtualNetworkRules: []
-      ipRules: useServiceBusFireWall ?[
-      {
-        ipMask: '20.37.194.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.42.226.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '191.235.226.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '52.228.82.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.195.68.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.41.194.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.204.197.192/26'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.37.158.0/23'
-        action: 'Allow'
-      }
-      {
-        ipMask: '52.150.138.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.42.5.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.41.6.0/23'
-        action: 'Allow'
-      }
-      {
-        ipMask: '40.80.187.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '40.119.10.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '40.82.252.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.42.134.0/23'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.125.155.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '40.74.28.0/23'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.166.41.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '51.104.26.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '174.165.193.226'
-        action: 'Allow'
-      }
-      {
-        ipMask: '174.21.173.9'
-        action: 'Allow'
-      }
-      {
-        ipMask: '167.220.149.157'
-        action: 'Allow'
-      }
-      {
-        ipMask: '131.107.1.233'
-        action: 'Allow'
-      }
-      {
-        ipMask: '70.106.212.29'
-        action: 'Allow'
-      }
-      {
-        ipMask: '131.107.1.156'
-        action: 'Allow'
-      }
-      {
-        ipMask: '20.150.248.0/24'
-        action: 'Allow'
-      }
-      {
-        ipMask: '131.107.174.88'
-        action: 'Allow'
-      }
-      {
-        ipMask: '167.220.148.16'
-        action: 'Allow'
-      }      
-      {
-        ipMask: '172.56.107.163'
-        action: 'Allow'
-      }
-      {
-        ipMask: '71.212.18.0'
-        action: 'Allow'
-      }
-      {
-        ipMask: myIPAddress
-        action: 'Allow'
-      }
-    ] : []
-      trustedServiceAccessEnabled: useServiceBusFireWall? true : false
-    }
-  }
-
-  resource serviceBusQueue 'queues@2022-10-01-preview' = {
+  }  
+  resource serviceBusQueue 'queues@2021-11-01' = {
     name: serviceBusQueueName
-    properties: {
-      // maxMessageSizeInKilobytes: usePremiumServiceBusFunctionApp? 1024 : 256
-      lockDuration: 'PT1M'
-      // maxSizeInMegabytes: 1024
-      requiresDuplicateDetection: false
-      requiresSession: false
-      defaultMessageTimeToLive: 'P14D'
-      deadLetteringOnMessageExpiration: false
-      enableBatchedOperations: true
-      duplicateDetectionHistoryTimeWindow: 'PT10M'
-      maxDeliveryCount: 10
-      status: 'Active'
-      enablePartitioning: false
-      enableExpress: false
-    }
   }
 }
 resource serviceBus_existing 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' existing = if(createVNetForPEP)  {
@@ -731,7 +582,7 @@ resource functionPlan_existing 'Microsoft.Web/serverfarms@2023-12-01' existing =
       name: functionPlanName
 }
 
-resource appInsights 'microsoft.insights/components@2020-02-02' = if(!createVNetForPEP){
+resource appInsights 'microsoft.insights/components@2020-02-02' = if(!createVNetForPEP && useApplicationInsights){
   name: appInsightsName
   location: location
   kind: 'web'
@@ -1006,7 +857,7 @@ resource appInsights 'microsoft.insights/components@2020-02-02' = if(!createVNet
   }
 }
 
-resource actionGroups_Application_Insights_Smart_Detection_name_resource 'microsoft.insights/actionGroups@2023-01-01' = if(!createVNetForPEP){
+resource actionGroups_Application_Insights_Smart_Detection_name_resource 'microsoft.insights/actionGroups@2023-01-01' = if(!createVNetForPEP && useApplicationInsights){
   name: actionGroups_Application_Insights_Smart_Detection_name
   location: 'Global'
   properties: {
@@ -1037,7 +888,7 @@ resource actionGroups_Application_Insights_Smart_Detection_name_resource 'micros
   }
 }
 
-resource smartDetectorAlertRulesFailureAnomalies 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = if(!createVNetForPEP){
+resource smartDetectorAlertRulesFailureAnomalies 'microsoft.alertsmanagement/smartdetectoralertrules@2021-04-01' = if(!createVNetForPEP && useApplicationInsights){
   name: '${uniquePrefix}-failure anomalies'
   location: 'global'
   properties: {
@@ -1553,21 +1404,21 @@ resource webTestSite 'Microsoft.Web/sites@2020-12-01' = if (createWebAppTestPEP 
       //      value: 'dotnet'
       //    }
       //  ]
-      //  appSettings: [
-      //    {
-      //      name: 'busNS'
-      //      value: serviceBusNS
-      //    }
-      //    {
-      //      name: 'queue'
-      //      value: serviceBusQueueName
-      //    }
-      //    {
-      //      name: 'serviceBusConnectionString' 
-      //      value: serviceBusConnection
-      //    }
-      //    // https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-service-bus-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv5&pivots=programming-language-javascript#connection-string
-      //  ]  
+      appSettings: [
+        {
+          name: 'busNS'
+          value: serviceBusNS
+        }
+        {
+          name: 'queue'
+          value: serviceBusQueueName
+        }
+        {
+          name: 'serviceBusConnectionString' 
+          value: serviceBusConnection
+        }
+        // https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-service-bus-trigger?tabs=python-v2%2Cisolated-process%2Cnodejs-v4%2Cextensionv5&pivots=programming-language-javascript#connection-string
+      ]  
     }
     //httpsOnly: true
   }
